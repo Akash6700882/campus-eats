@@ -1,10 +1,72 @@
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "@/components/ui/sonner";
+import { queryClient } from "@/lib/queryClient";
+import { ThemeProvider } from "@/store/theme";
+import { AuthProvider } from "@/store/auth";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { HomePage } from "@/pages/customer/HomePage";
+import { LoginPage } from "@/pages/customer/LoginPage";
+import { SignupPage } from "@/pages/customer/SignupPage";
+import { MenuPage } from "@/pages/customer/MenuPage";
+import { CartPage } from "@/pages/customer/CartPage";
+import { CheckoutPage } from "@/pages/customer/CheckoutPage";
+import { OrderTrackingPage } from "@/pages/customer/OrderTrackingPage";
+import { OrderHistoryPage } from "@/pages/customer/OrderHistoryPage";
+import { ProfilePage } from "@/pages/customer/ProfilePage";
+
 export default function App() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold">Campus Eats</h1>
-        <p className="mt-2 text-gray-500">Scaffold running — pages arrive in Phase 8/9.</p>
-      </div>
-    </div>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <BrowserRouter>
+          <AuthProvider>
+            <AppLayout>
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/signup" element={<SignupPage />} />
+                <Route path="/menu" element={<MenuPage />} />
+                <Route path="/cart" element={<CartPage />} />
+                <Route
+                  path="/checkout"
+                  element={
+                    <ProtectedRoute>
+                      <CheckoutPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/orders"
+                  element={
+                    <ProtectedRoute>
+                      <OrderHistoryPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/orders/:id"
+                  element={
+                    <ProtectedRoute>
+                      <OrderTrackingPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/profile"
+                  element={
+                    <ProtectedRoute>
+                      <ProfilePage />
+                    </ProtectedRoute>
+                  }
+                />
+              </Routes>
+            </AppLayout>
+            <Toaster richColors position="top-center" />
+          </AuthProvider>
+        </BrowserRouter>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }

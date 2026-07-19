@@ -70,18 +70,62 @@ geofence/WS pub-sub, API tests for every router above including role-gating,
 invalid-transition rejection, and the full kitchen → delivery → OTP-delivered
 happy path.
 
+### Phase 7 — Customer frontend *(current)*
+React + TypeScript + Vite, Tailwind v4, shadcn/ui (`radix-nova` style, warm
+orange food-brand palette, light/dark via a `ThemeProvider` toggling `.dark`
+on `<html>`). Covers the full customer journey against the Phase 1–6 APIs:
+
+- **Shell**: sticky `Navbar` (search, live cart-count badge, theme toggle,
+  auth-aware menu, mobile `Sheet` nav), `Footer`, `ProtectedRoute` for
+  auth-gated pages, axios client with automatic access-token refresh on 401.
+- **Auth**: signup and login (password or phone OTP) pages.
+- **Home**: hero with search, category chips, "Popular right now" and
+  "Today's specials" rows.
+- **Menu**: search (debounced), category/veg/rating filters synced to the
+  URL, `FoodCard` (image, veg badge, discount, rating, prep time, quantity
+  stepper, add-to-cart).
+- **Cart**: quantity edit/remove, coupon apply with live-priced preview,
+  full charge breakdown.
+- **Checkout**: saved-address picker + inline add-address form (campus
+  fields, browser-geolocation capture — no Google Maps key needed for the
+  core flow), order notes, place order.
+- **Payment & tracking** (`/orders/:id`, doubles as the post-checkout
+  confirmation page): Razorpay Checkout.js integration (create → pay →
+  verify signature), pending-order cancel (restores cart), 8-step status
+  timeline, delivery OTP display, delivery-partner card once assigned, live
+  updates via the `/ws/orders/{id}` WebSocket (falls back to a 15s poll),
+  invoice download.
+- **Order history & profile**: past orders with status badges, saved-address
+  management, logout.
+
+Verified end-to-end in a real browser against the live backend (signup →
+browse → filter → cart → checkout with a captured campus location → order
+placed → payment attempt cleanly rejected with placeholder Razorpay test
+keys → invoice download → order history → profile) — not just typechecked.
+
+Along the way, found and fixed two identical-shaped ORM bugs where a
+freshly-created related row (a `Payment`, a `DeliveryPartner` assignment)
+was attached via `session.add()` / a bare FK column instead of the
+SQLAlchemy relationship, so an already-loaded parent object in the same
+session never saw it (`payment_service.py`, `order_service.py`). Also
+hardened `RazorpayGateway.create_order` to turn a Razorpay auth failure
+(e.g. this repo's placeholder test keys) into a clean `PaymentError` instead
+of an unhandled 500.
+
 ## Not started yet
 
 - **Reviews, wishlist, notifications API** — models exist (`Review`,
   `ReviewLike`, `WishlistItem`, `Notification`), no service/router yet.
 - **Admin analytics dashboard** — revenue/order charts, best-sellers,
   customer/delivery-partner management UI, monthly/yearly reports.
-- **Frontend** — `frontend/src` is still the unmodified Vite scaffold
-  (`main.tsx`, `App.tsx`, `index.css`). No pages, components, or API
-  integration exist yet, for any of the four roles.
+- **Kitchen/delivery/admin frontend** — those APIs (Phase 6) have no UI yet;
+  `frontend/src/pages/{kitchen,delivery,admin}` are still empty directories.
 - **Deployment** — Dockerfiles and docker-compose exist for local dev; no
   CI workflow content beyond the `.github/workflows/` folder shell, no
   Vercel/Render/Railway config, no Postman collection.
+- **Frontend test suite** — `vitest`/`@testing-library/react` are installed
+  but no component tests have been written yet; correctness so far has been
+  verified by hand in a real browser plus a full `tsc --noEmit` pass.
 
 ## Known gaps / accepted trade-offs
 
@@ -90,3 +134,10 @@ happy path.
   scale, would need a routing API for anything larger.
 - WebSocket fan-out is in-process only (see above) — a real multi-worker
   deployment needs Redis pub/sub or similar wired into `app/ws/manager.py`.
+- No Google Maps integration yet (`VITE_GOOGLE_MAPS_API_KEY` is unset in
+  this environment) — checkout captures the delivery location via the
+  browser Geolocation API instead; a draggable-pin map picker is a
+  drop-in addition once a key is available.
+- The frontend's `eslint` devDependency has no `eslint.config.js` in this
+  scaffold yet (pre-existing gap, not introduced by this phase) — `tsc
+  --noEmit` is the current type-safety gate.

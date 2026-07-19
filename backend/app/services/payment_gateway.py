@@ -37,9 +37,15 @@ class RazorpayGateway:
         if self._client is None:
             raise PaymentError("Razorpay is not configured — set RAZORPAY_KEY_ID/SECRET in .env")
         amount_paise = int(round(amount_rupees * 100))
-        return self._client.order.create(
-            {"amount": amount_paise, "currency": "INR", "receipt": receipt, "payment_capture": 1}
-        )
+        try:
+            return self._client.order.create(
+                {"amount": amount_paise, "currency": "INR", "receipt": receipt, "payment_capture": 1}
+            )
+        except razorpay.errors.BadRequestError as exc:
+            raise PaymentError(
+                "Razorpay rejected the request — RAZORPAY_KEY_ID/SECRET in .env are placeholders, "
+                "not real test-mode keys"
+            ) from exc
 
     def verify_signature(
         self, razorpay_order_id: str, razorpay_payment_id: str, razorpay_signature: str

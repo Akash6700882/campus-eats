@@ -85,3 +85,51 @@ Redis pub/sub (Redis is already a dependency for OTP/rate-limiting).
 ## Password hashing
 
 `app/core/security.py` calls `bcrypt` directly rather than through `passlib.CryptContext` — recent `bcrypt` releases (≥4.1) dropped the `__about__` attribute passlib's backend probing depends on, which breaks `CryptContext(schemes=["bcrypt"])` at hash time. Calling `bcrypt.hashpw`/`checkpw` directly sidesteps that entirely.
+
+## Frontend (`frontend/src/`)
+
+```
+api/         # Thin axios wrappers, one file per backend resource (auth, menu, cart, orders...)
+components/
+  ui/        # shadcn/ui primitives — generated, owned/patched in-place (see note below)
+  layout/    # Navbar, Footer, AppLayout
+  food/      # FoodCard, FoodRow, CategoryChips, VegBadge
+  address/   # AddressForm (shared by checkout and profile)
+  order/     # StatusTimeline
+hooks/       # React Query hooks per resource (useCart, useMenu, useOrders, useAddresses...)
+lib/         # api.ts (axios instance + refresh interceptor), queryClient, format, razorpay, utils
+pages/customer/  # One component per route
+store/       # AuthProvider, ThemeProvider (React Context, not Redux/Zustand — small enough)
+types/       # Hand-written TS types mirroring the backend Pydantic schemas
+```
+
+Data flow: page → React Query hook → `api/*.ts` → axios instance (`lib/api.ts`)
+with a request interceptor attaching the bearer token and a response
+interceptor that transparently refreshes on 401 (single-flight, so
+concurrent requests don't each trigger their own refresh) and redirects to
+`/login` if the refresh token is also dead. Cart/address/order mutations
+invalidate their React Query key on success rather than manually patching
+the cache — simpler and correct at this app's request volume.
+
+**Tailwind v4, not v3.** The scaffold shipped pinned to Tailwind v3, but the
+current `shadcn` CLI's registry (`radix-nova` style) generates components
+using v4-only syntax (`@theme`, `@custom-variant`, bracket-less `data-*`/
+`has-*`/`in-*` variants). Rather than hand-patch every generated component
+back to v3 conventions, the project was upgraded to Tailwind v4 +
+`@tailwindcss/vite` (see `vite.config.ts`, `src/index.css`); `tailwind.config.js`
+no longer exists (v4 is CSS-first — theme tokens and the `@custom-variant dark`
+class strategy live directly in `index.css`).
+
+**React 18, and a ref-forwarding gotcha.** The CLI's generated components
+assume React 19, where plain function components can receive a `ref` prop
+directly. This project is still on React 18.3 (pinned for ecosystem
+compatibility), where that silently fails — a `ref` handed to a non-
+`forwardRef` function component is dropped with a console warning, not an
+error. This is invisible until something actually depends on the ref: it
+surfaced as `Input`/`Textarea` refusing to hold values under
+`react-hook-form`'s `register()` (RHF reads the DOM node via ref, not
+controlled state) and `Button` losing its ref inside `asChild` compositions
+like `SheetTrigger`. Fixed by wrapping `Button`, `Input`, and `Textarea` in
+`React.forwardRef`. Other generated primitives (`Select`, `Dialog`, `Tabs`,
+etc.) have the same latent gap but haven't needed a ref in this app yet —
+apply the same fix if one starts misbehaving.
