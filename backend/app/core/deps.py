@@ -18,6 +18,7 @@ from app.repositories.delivery_zone_repository import DeliveryZoneRepository
 from app.repositories.food_repository import FoodRepository
 from app.repositories.notification_repository import NotificationRepository
 from app.repositories.order_repository import OrderRepository
+from app.repositories.payment_repository import PaymentRepository
 from app.repositories.review_repository import ReviewRepository
 from app.repositories.role_repository import RoleRepository
 from app.repositories.user_repository import UserRepository
@@ -108,6 +109,10 @@ def get_notification_repository(session: DbSession) -> NotificationRepository:
     return NotificationRepository(session)
 
 
+def get_payment_repository(session: DbSession) -> PaymentRepository:
+    return PaymentRepository(session)
+
+
 UserRepo = Annotated[UserRepository, Depends(get_user_repository)]
 RoleRepo = Annotated[RoleRepository, Depends(get_role_repository)]
 OtpSvc = Annotated[OtpService, Depends(get_otp_service)]
@@ -124,6 +129,7 @@ DeliveryPartnerRepo = Annotated[DeliveryPartnerRepository, Depends(get_delivery_
 ReviewRepo = Annotated[ReviewRepository, Depends(get_review_repository)]
 WishlistRepo = Annotated[WishlistRepository, Depends(get_wishlist_repository)]
 NotificationRepo = Annotated[NotificationRepository, Depends(get_notification_repository)]
+PaymentRepo = Annotated[PaymentRepository, Depends(get_payment_repository)]
 
 
 def get_auth_service(
@@ -203,9 +209,9 @@ PaymentGw = Annotated[PaymentGateway, Depends(get_payment_gateway)]
 
 
 def get_payment_service(
-    order_repo: OrderRepo, cart_repo: CartRepo, food_repo: FoodRepo, gateway: PaymentGw
+    order_repo: OrderRepo, cart_repo: CartRepo, food_repo: FoodRepo, payment_repo: PaymentRepo, gateway: PaymentGw
 ) -> PaymentService:
-    return PaymentService(order_repo, cart_repo, food_repo, gateway)
+    return PaymentService(order_repo, cart_repo, food_repo, payment_repo, gateway)
 
 
 PaymentSvc = Annotated[PaymentService, Depends(get_payment_service)]

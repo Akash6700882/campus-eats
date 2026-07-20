@@ -17,6 +17,8 @@ class PaymentGateway(Protocol):
         self, razorpay_order_id: str, razorpay_payment_id: str, razorpay_signature: str
     ) -> bool: ...
 
+    def verify_webhook_signature(self, payload: bytes, signature: str) -> bool: ...
+
 
 class RazorpayGateway:
     """Thin wrapper around the Razorpay SDK. Injected via DI (see
@@ -59,6 +61,20 @@ class RazorpayGateway:
                     "razorpay_payment_id": razorpay_payment_id,
                     "razorpay_signature": razorpay_signature,
                 }
+            )
+            return True
+        except razorpay.errors.SignatureVerificationError:
+            return False
+
+    def verify_webhook_signature(self, payload: bytes, signature: str) -> bool:
+        if self._client is None:
+            raise PaymentError("Razorpay is not configured — set RAZORPAY_KEY_ID/SECRET in .env")
+        settings = get_settings()
+        if not settings.razorpay_webhook_secret:
+            raise PaymentError("Razorpay webhook secret is not configured — set RAZORPAY_WEBHOOK_SECRET in .env")
+        try:
+            self._client.utility.verify_webhook_signature(
+                payload.decode(), signature, settings.razorpay_webhook_secret
             )
             return True
         except razorpay.errors.SignatureVerificationError:

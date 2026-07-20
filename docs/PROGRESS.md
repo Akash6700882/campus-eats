@@ -247,6 +247,26 @@ Windows here), so rendering with a real key is unverified; typecheck,
 eslint, the full backend (123) and frontend (28) test suites, and a
 production build all pass.
 
+### Phase 11 — Razorpay webhook (server-side payment reconciliation)
+
+`POST /payments/webhook`: verifies the `X-Razorpay-Signature` header via
+`RazorpayGateway.verify_webhook_signature` (HMAC against
+`RAZORPAY_WEBHOOK_SECRET`), then reconciles `Payment.status` from
+`payment.captured`/`order.paid` (→ paid) and `payment.failed` (→ failed)
+events. Idempotent by design: a payment already marked paid is left
+untouched, since the existing client-side verify-signature call (Phase 5)
+usually wins the race against the async webhook — this is purely the
+fallback for when that client-side call never lands (dropped connection,
+closed tab mid-payment). New `PaymentRepository.get_by_provider_order_id`
+since payments previously were only ever looked up through their parent
+order. 5 new tests (128 total); ruff clean.
+
+**Not yet configured**: `RAZORPAY_WEBHOOK_SECRET` is still a placeholder,
+and no webhook is registered in the Razorpay dashboard — both need a
+publicly reachable HTTPS URL to point at, which this app doesn't have
+until Phase "Deployment" below happens (or a tunnel like ngrok is used
+for interim local testing).
+
 ## Not started yet
 
 - **Kitchen/delivery/admin frontend for reviews/wishlist/notifications** —

@@ -1,6 +1,7 @@
+import json
 import uuid
 
-from fastapi import APIRouter, HTTPException, Response, status
+from fastapi import APIRouter, HTTPException, Request, Response, status
 
 from app.core.deps import CurrentUser, DbSession, OrderRepo, PaymentSvc
 from app.schemas.order import OrderResponse
@@ -68,6 +69,28 @@ async def cancel_unpaid_order(
 
     full_order = await order_repo.get_for_user(order_id, current_user.id)
     return OrderResponse.from_order(full_order)
+
+
+@router.post("/payments/webhook")
+async def razorpay_webhook(request: Request, db: DbSession, payment_service: PaymentSvc) -> dict[str, str]:
+    """Server-side fallback for payment confirmation — configure this URL in
+    the Razorpay dashboard's webhook settings, subscribed to at least
+    `payment.captured` (or `order.paid`) and `payment.failed`."""
+    body = await request.body()
+    signature = request.headers.get("X-Razorpay-Signature", "")
+
+    try:
+        valid = payment_service.verify_webhook_signature(body, signature)
+    except PaymentError as exc:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc)) from exc
+    if not valid:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "invalid webhook signature")
+
+    event = json.loads(body)
+    payment_entity = event.get("payload", {}).get("payment", {}).get("entity", {})
+    await payment_service.handle_webhook_event(event.get("event", ""), payment_entity)
+    await db.commit()
+    return {"status": "ok"}
 
 
 @router.get("/orders/{order_id}/invoice")
