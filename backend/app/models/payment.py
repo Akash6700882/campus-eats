@@ -1,4 +1,5 @@
 import uuid
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Enum, ForeignKey, Numeric, String
 from sqlalchemy.dialects.postgresql import UUID
@@ -7,6 +8,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.db import Base
 from app.models.enums import PaymentMethod, PaymentStatus
 from app.models.mixins import TimestampMixin
+
+if TYPE_CHECKING:
+    from app.models.order import Order
 
 
 class Payment(Base, TimestampMixin):

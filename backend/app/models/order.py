@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import UUID
@@ -8,6 +9,13 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.db import Base
 from app.models.enums import OrderStatus
 from app.models.mixins import TimestampMixin
+
+if TYPE_CHECKING:
+    from app.models.address import Address
+    from app.models.delivery import DeliveryPartner
+    from app.models.food import Food
+    from app.models.payment import Payment
+    from app.models.user import User
 
 
 class Order(Base, TimestampMixin):

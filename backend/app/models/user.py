@@ -1,4 +1,5 @@
 import uuid
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
@@ -6,6 +7,15 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db import Base
 from app.models.mixins import TimestampMixin
+
+if TYPE_CHECKING:
+    from app.models.address import Address
+    from app.models.cart import CartItem
+    from app.models.delivery import DeliveryPartner
+    from app.models.notification import Notification
+    from app.models.order import Order
+    from app.models.review import Review, WishlistItem
+    from app.models.role import Role
 
 
 class User(Base, TimestampMixin):

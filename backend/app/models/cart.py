@@ -1,4 +1,5 @@
 import uuid
+from typing import TYPE_CHECKING
 
 from sqlalchemy import ForeignKey, Integer, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
@@ -6,6 +7,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db import Base
 from app.models.mixins import TimestampMixin
+
+if TYPE_CHECKING:
+    from app.models.food import Food
+    from app.models.user import User
 
 
 class CartItem(Base, TimestampMixin):
