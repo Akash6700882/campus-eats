@@ -1,5 +1,6 @@
 import { LayoutDashboard } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AdminAnalyticsTab } from "@/pages/admin/AdminAnalyticsTab";
 import { AdminOrdersTab } from "@/pages/admin/AdminOrdersTab";
 import { AdminPartnersTab } from "@/pages/admin/AdminPartnersTab";
 import { AdminMenuTab } from "@/pages/admin/AdminMenuTab";
@@ -11,12 +12,16 @@ export function AdminDashboardPage() {
         <LayoutDashboard className="h-6 w-6 text-primary" /> Admin dashboard
       </h1>
 
-      <Tabs defaultValue="orders" className="mt-6">
+      <Tabs defaultValue="analytics" className="mt-6">
         <TabsList>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="orders">Orders</TabsTrigger>
           <TabsTrigger value="partners">Delivery partners</TabsTrigger>
           <TabsTrigger value="menu">Menu</TabsTrigger>
         </TabsList>
+        <TabsContent value="analytics" className="mt-4">
+          <AdminAnalyticsTab />
+        </TabsContent>
         <TabsContent value="orders" className="mt-4">
           <AdminOrdersTab />
         </TabsContent>

@@ -2,7 +2,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.core.deps import CurrentUser, DbSession, DeliveryPartnerSvc, OrderRepo, OrderSvc, require_role
+from app.core.deps import CurrentUser, DbSession, DeliveryPartnerSvc, NotificationSvc, OrderRepo, OrderSvc, require_role
 from app.models.enums import RoleName
 from app.schemas.delivery import (
     DeliverOrderRequest,
@@ -79,10 +79,12 @@ async def pickup_order(
     order_service: OrderSvc,
     order_repo: OrderRepo,
     delivery_service: DeliveryPartnerSvc,
+    notification_service: NotificationSvc,
 ) -> OrderResponse:
     partner_id = await _my_partner_id(current_user, delivery_service)
     try:
         order = await order_service.delivery_pickup(order_id, partner_id)
+        await notification_service.notify_order_status(order.user_id, order.order_number, order.status)
         await db.commit()
     except OrderError as exc:
         await db.rollback()
@@ -99,10 +101,12 @@ async def start_transit(
     order_service: OrderSvc,
     order_repo: OrderRepo,
     delivery_service: DeliveryPartnerSvc,
+    notification_service: NotificationSvc,
 ) -> OrderResponse:
     partner_id = await _my_partner_id(current_user, delivery_service)
     try:
         order = await order_service.delivery_start_transit(order_id, partner_id)
+        await notification_service.notify_order_status(order.user_id, order.order_number, order.status)
         await db.commit()
     except OrderError as exc:
         await db.rollback()
@@ -120,10 +124,12 @@ async def deliver_order(
     order_service: OrderSvc,
     order_repo: OrderRepo,
     delivery_service: DeliveryPartnerSvc,
+    notification_service: NotificationSvc,
 ) -> OrderResponse:
     partner_id = await _my_partner_id(current_user, delivery_service)
     try:
         order = await order_service.delivery_complete(order_id, partner_id, payload.otp)
+        await notification_service.notify_order_status(order.user_id, order.order_number, order.status)
         await db.commit()
     except OrderError as exc:
         await db.rollback()

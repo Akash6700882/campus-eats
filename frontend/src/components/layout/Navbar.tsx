@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Menu, Moon, Search, ShoppingCart, Sun, UtensilsCrossed } from "lucide-react";
+import { Heart, LayoutDashboard, Menu, Moon, Search, ShoppingCart, Sun, UtensilsCrossed } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { NotificationsBell } from "@/components/layout/NotificationsBell";
 import { useAuth } from "@/store/auth";
 import { useTheme } from "@/store/theme";
 import { useCart } from "@/hooks/useCart";
@@ -99,6 +100,16 @@ export function Navbar() {
             </Button>
           )}
 
+          {!isStaff && isAuthenticated && <NotificationsBell />}
+
+          {!isStaff && (
+            <Button variant="ghost" size="icon" asChild aria-label="Wishlist">
+              <Link to="/wishlist">
+                <Heart className="h-5 w-5" />
+              </Link>
+            </Button>
+          )}
+
           {!isStaff && (
             <Button variant="ghost" size="icon" className="relative" asChild aria-label="Cart">
               <Link to="/cart">
@@ -126,6 +137,9 @@ export function Navbar() {
                   <>
                     <DropdownMenuItem asChild>
                       <Link to="/orders">My Orders</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/wishlist">Wishlist</Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link to="/profile">Profile & Addresses</Link>
@@ -177,9 +191,14 @@ export function Navbar() {
                 {isAuthenticated ? (
                   <>
                     {!isStaff && (
-                      <Button variant="ghost" className="justify-start" asChild onClick={() => setMobileOpen(false)}>
-                        <Link to="/profile">Profile & Addresses</Link>
-                      </Button>
+                      <>
+                        <Button variant="ghost" className="justify-start" asChild onClick={() => setMobileOpen(false)}>
+                          <Link to="/wishlist">Wishlist</Link>
+                        </Button>
+                        <Button variant="ghost" className="justify-start" asChild onClick={() => setMobileOpen(false)}>
+                          <Link to="/profile">Profile & Addresses</Link>
+                        </Button>
+                      </>
                     )}
                     <Button variant="ghost" className="justify-start" onClick={logout}>
                       Log out

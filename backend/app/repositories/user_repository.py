@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
 from app.models.user import User
@@ -36,3 +36,9 @@ class UserRepository(BaseRepository[User]):
             .order_by(User.full_name)
         )
         return list(result.scalars().all())
+
+    async def count_by_role(self, role_name: str) -> int:
+        result = await self.session.execute(
+            select(func.count()).select_from(User).where(User.role.has(name=role_name))
+        )
+        return int(result.scalar_one())

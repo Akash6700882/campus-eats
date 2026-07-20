@@ -16,9 +16,12 @@ from app.repositories.coupon_repository import CouponRepository
 from app.repositories.delivery_partner_repository import DeliveryPartnerRepository
 from app.repositories.delivery_zone_repository import DeliveryZoneRepository
 from app.repositories.food_repository import FoodRepository
+from app.repositories.notification_repository import NotificationRepository
 from app.repositories.order_repository import OrderRepository
+from app.repositories.review_repository import ReviewRepository
 from app.repositories.role_repository import RoleRepository
 from app.repositories.user_repository import UserRepository
+from app.repositories.wishlist_repository import WishlistRepository
 from app.services.address_service import AddressService
 from app.services.auth_service import AuthService
 from app.services.cart_service import CartService
@@ -28,10 +31,12 @@ from app.services.email_service import EmailService
 from app.services.image_service import ImageService
 from app.services.menu_service import MenuService
 from app.services.notification_provider import get_sms_provider
+from app.services.notification_service import NotificationService
 from app.services.order_service import OrderService
 from app.services.otp_service import OtpService
 from app.services.payment_gateway import PaymentGateway, RazorpayGateway
 from app.services.payment_service import PaymentService
+from app.services.review_service import ReviewService
 
 DbSession = Annotated[AsyncSession, Depends(get_db)]
 
@@ -90,6 +95,18 @@ def get_delivery_partner_repository(session: DbSession) -> DeliveryPartnerReposi
     return DeliveryPartnerRepository(session)
 
 
+def get_review_repository(session: DbSession) -> ReviewRepository:
+    return ReviewRepository(session)
+
+
+def get_wishlist_repository(session: DbSession) -> WishlistRepository:
+    return WishlistRepository(session)
+
+
+def get_notification_repository(session: DbSession) -> NotificationRepository:
+    return NotificationRepository(session)
+
+
 UserRepo = Annotated[UserRepository, Depends(get_user_repository)]
 RoleRepo = Annotated[RoleRepository, Depends(get_role_repository)]
 OtpSvc = Annotated[OtpService, Depends(get_otp_service)]
@@ -103,6 +120,9 @@ CouponRepo = Annotated[CouponRepository, Depends(get_coupon_repository)]
 DeliveryZoneRepo = Annotated[DeliveryZoneRepository, Depends(get_delivery_zone_repository)]
 OrderRepo = Annotated[OrderRepository, Depends(get_order_repository)]
 DeliveryPartnerRepo = Annotated[DeliveryPartnerRepository, Depends(get_delivery_partner_repository)]
+ReviewRepo = Annotated[ReviewRepository, Depends(get_review_repository)]
+WishlistRepo = Annotated[WishlistRepository, Depends(get_wishlist_repository)]
+NotificationRepo = Annotated[NotificationRepository, Depends(get_notification_repository)]
 
 
 def get_auth_service(
@@ -152,9 +172,19 @@ def get_delivery_partner_service(
     return DeliveryPartnerService(delivery_partner_repo, user_repo)
 
 
+def get_review_service(review_repo: ReviewRepo, food_repo: FoodRepo, order_repo: OrderRepo) -> ReviewService:
+    return ReviewService(review_repo, food_repo, order_repo)
+
+
+def get_notification_service(notification_repo: NotificationRepo) -> NotificationService:
+    return NotificationService(notification_repo)
+
+
 CartSvc = Annotated[CartService, Depends(get_cart_service)]
 OrderSvc = Annotated[OrderService, Depends(get_order_service)]
 DeliveryPartnerSvc = Annotated[DeliveryPartnerService, Depends(get_delivery_partner_service)]
+ReviewSvc = Annotated[ReviewService, Depends(get_review_service)]
+NotificationSvc = Annotated[NotificationService, Depends(get_notification_service)]
 
 
 def get_payment_gateway() -> PaymentGateway:

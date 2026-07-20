@@ -23,7 +23,6 @@ const RATING_OPTIONS = [
 
 export function MenuPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [queryInput, setQueryInput] = useState(searchParams.get("q") ?? "");
 
   const categoryId = searchParams.get("category_id") ?? undefined;
   const vegParam = searchParams.get("is_veg");
@@ -32,9 +31,12 @@ export function MenuPage() {
   const minRating = searchParams.get("min_rating");
   const q = searchParams.get("q") ?? undefined;
 
-  useEffect(() => {
+  const [queryInput, setQueryInput] = useState(q ?? "");
+  const [prevQ, setPrevQ] = useState(q);
+  if (q !== prevQ) {
+    setPrevQ(q);
     setQueryInput(q ?? "");
-  }, [q]);
+  }
 
   useEffect(() => {
     const handle = setTimeout(() => {

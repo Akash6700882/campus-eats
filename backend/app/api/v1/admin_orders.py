@@ -2,7 +2,16 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.core.deps import DbSession, DeliveryPartnerRepo, DeliveryPartnerSvc, OrderRepo, OrderSvc, UserRepo, require_role
+from app.core.deps import (
+    DbSession,
+    DeliveryPartnerRepo,
+    DeliveryPartnerSvc,
+    NotificationSvc,
+    OrderRepo,
+    OrderSvc,
+    UserRepo,
+    require_role,
+)
 from app.models.enums import OrderStatus, RoleName
 from app.schemas.delivery import (
     AdminAssignPartnerRequest,
@@ -37,10 +46,16 @@ async def list_all_orders(
 
 @router.post("/admin/orders/{order_id}/cancel", response_model=OrderResponse, dependencies=[RequireAdmin])
 async def force_cancel_order(
-    order_id: uuid.UUID, payload: AdminCancelRequest, db: DbSession, order_service: OrderSvc, order_repo: OrderRepo
+    order_id: uuid.UUID,
+    payload: AdminCancelRequest,
+    db: DbSession,
+    order_service: OrderSvc,
+    order_repo: OrderRepo,
+    notification_service: NotificationSvc,
 ) -> OrderResponse:
     try:
         order = await order_service.admin_force_cancel(order_id, payload.reason)
+        await notification_service.notify_order_status(order.user_id, order.order_number, order.status)
         await db.commit()
     except OrderError as exc:
         await db.rollback()
@@ -56,9 +71,11 @@ async def assign_delivery_partner(
     db: DbSession,
     order_service: OrderSvc,
     order_repo: OrderRepo,
+    notification_service: NotificationSvc,
 ) -> OrderResponse:
     try:
         order = await order_service.admin_assign_partner(order_id, payload.delivery_partner_id)
+        await notification_service.notify_order_status(order.user_id, order.order_number, order.status)
         await db.commit()
     except OrderError as exc:
         await db.rollback()

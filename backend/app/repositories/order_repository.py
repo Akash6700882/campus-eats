@@ -5,7 +5,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models.delivery import DeliveryPartner
 from app.models.enums import OrderStatus
-from app.models.order import Order
+from app.models.order import Order, OrderItem
 from app.repositories.base import BaseRepository
 
 
@@ -67,3 +67,12 @@ class OrderRepository(BaseRepository[Order]):
             query = query.where(Order.status.in_(statuses))
         result = await self.session.execute(query.order_by(Order.created_at.asc()))
         return list(result.scalars().all())
+
+    async def has_delivered_order_with_food(self, user_id: uuid.UUID, food_id: uuid.UUID) -> bool:
+        result = await self.session.execute(
+            select(Order.id)
+            .join(OrderItem, OrderItem.order_id == Order.id)
+            .where(Order.user_id == user_id, Order.status == OrderStatus.DELIVERED, OrderItem.food_id == food_id)
+            .limit(1)
+        )
+        return result.first() is not None

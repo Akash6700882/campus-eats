@@ -2,9 +2,10 @@ import uuid
 
 from fastapi import APIRouter, HTTPException, status
 
-from app.core.deps import CurrentUser, DbSession, OrderRepo, OrderSvc
+from app.core.deps import CurrentUser, DbSession, NotificationSvc, OrderRepo, OrderSvc
 from app.schemas.order import CheckoutRequest, OrderResponse
 from app.services.order_service import OrderError
+from app.ws.events import broadcast_order_event
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -40,14 +41,21 @@ async def get_order(order_id: uuid.UUID, current_user: CurrentUser, order_repo: 
 
 @router.post("/{order_id}/cancel", response_model=OrderResponse)
 async def cancel_order(
-    order_id: uuid.UUID, current_user: CurrentUser, db: DbSession, order_service: OrderSvc, order_repo: OrderRepo
+    order_id: uuid.UUID,
+    current_user: CurrentUser,
+    db: DbSession,
+    order_service: OrderSvc,
+    order_repo: OrderRepo,
+    notification_service: NotificationSvc,
 ) -> OrderResponse:
     try:
-        await order_service.cancel_order(order_id, current_user.id)
+        order = await order_service.cancel_order(order_id, current_user.id)
+        await notification_service.notify_order_status(current_user.id, order.order_number, order.status)
         await db.commit()
     except OrderError as exc:
         await db.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
 
+    await broadcast_order_event(order, "order.cancelled")
     full_order = await order_repo.get_for_user(order_id, current_user.id)
     return OrderResponse.from_order(full_order)

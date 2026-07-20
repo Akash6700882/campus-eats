@@ -2,7 +2,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.core.deps import DbSession, OrderRepo, OrderSvc, require_role
+from app.core.deps import DbSession, NotificationSvc, OrderRepo, OrderSvc, require_role
 from app.models.enums import RoleName
 from app.schemas.delivery import KitchenRejectRequest
 from app.schemas.order import OrderResponse
@@ -27,10 +27,11 @@ async def list_kitchen_orders(order_repo: OrderRepo) -> list[OrderResponse]:
 
 @router.post("/orders/{order_id}/accept", response_model=OrderResponse, dependencies=[RequireKitchen])
 async def accept_order(
-    order_id: uuid.UUID, db: DbSession, order_service: OrderSvc, order_repo: OrderRepo
+    order_id: uuid.UUID, db: DbSession, order_service: OrderSvc, order_repo: OrderRepo, notification_service: NotificationSvc
 ) -> OrderResponse:
     try:
         order = await order_service.kitchen_accept(order_id)
+        await notification_service.notify_order_status(order.user_id, order.order_number, order.status)
         await db.commit()
     except OrderError as exc:
         await db.rollback()
@@ -46,9 +47,11 @@ async def reject_order(
     db: DbSession,
     order_service: OrderSvc,
     order_repo: OrderRepo,
+    notification_service: NotificationSvc,
 ) -> OrderResponse:
     try:
         order = await order_service.kitchen_reject(order_id, payload.reason)
+        await notification_service.notify_order_status(order.user_id, order.order_number, order.status)
         await db.commit()
     except OrderError as exc:
         await db.rollback()
@@ -61,10 +64,11 @@ async def reject_order(
     "/orders/{order_id}/start-preparing", response_model=OrderResponse, dependencies=[RequireKitchen]
 )
 async def start_preparing(
-    order_id: uuid.UUID, db: DbSession, order_service: OrderSvc, order_repo: OrderRepo
+    order_id: uuid.UUID, db: DbSession, order_service: OrderSvc, order_repo: OrderRepo, notification_service: NotificationSvc
 ) -> OrderResponse:
     try:
         order = await order_service.kitchen_start_preparing(order_id)
+        await notification_service.notify_order_status(order.user_id, order.order_number, order.status)
         await db.commit()
     except OrderError as exc:
         await db.rollback()
@@ -75,10 +79,11 @@ async def start_preparing(
 
 @router.post("/orders/{order_id}/ready", response_model=OrderResponse, dependencies=[RequireKitchen])
 async def mark_ready(
-    order_id: uuid.UUID, db: DbSession, order_service: OrderSvc, order_repo: OrderRepo
+    order_id: uuid.UUID, db: DbSession, order_service: OrderSvc, order_repo: OrderRepo, notification_service: NotificationSvc
 ) -> OrderResponse:
     try:
         order = await order_service.kitchen_mark_ready(order_id)
+        await notification_service.notify_order_status(order.user_id, order.order_number, order.status)
         await db.commit()
     except OrderError as exc:
         await db.rollback()

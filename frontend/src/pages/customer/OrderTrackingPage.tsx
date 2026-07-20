@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { PageSpinner } from "@/components/PageSpinner";
 import { StatusTimeline } from "@/components/order/StatusTimeline";
+import { RateOrderItem } from "@/components/order/RateOrderItem";
 import { useOrder, useCancelOrder } from "@/hooks/useOrders";
 import { useOrderSocket } from "@/hooks/useOrderSocket";
 import { cartQueryKey } from "@/hooks/useCart";
@@ -175,6 +176,17 @@ export function OrderTrackingPage() {
                     <Phone className="h-4 w-4" /> Call
                   </a>
                 </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {order.status === "delivered" && (
+            <Card>
+              <CardContent className="space-y-3 py-4">
+                <p className="font-heading font-semibold">Rate your order</p>
+                {order.items.map((item) => (
+                  <RateOrderItem key={item.food_id} orderId={order.id} item={item} />
+                ))}
               </CardContent>
             </Card>
           )}

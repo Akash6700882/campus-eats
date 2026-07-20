@@ -35,7 +35,7 @@ is the source of truth, not the aspirational feature list in the original brief.
 - Create → pay → verify signature → mark paid; cancel-if-unpaid restores the
   cart; PDF invoice generation.
 
-### Phase 6 — Staff order lifecycle & live tracking *(current)*
+### Phase 6 — Staff order lifecycle & live tracking
 - **Kitchen dashboard API** (`/kitchen/*`): queue of active orders, accept,
   reject (with reason), start preparing, mark ready.
 - **Delivery dashboard API** (`/delivery/*`): a delivery-role user's own
@@ -70,7 +70,7 @@ geofence/WS pub-sub, API tests for every router above including role-gating,
 invalid-transition rejection, and the full kitchen → delivery → OTP-delivered
 happy path.
 
-### Phase 7 — Customer frontend *(current)*
+### Phase 7 — Customer frontend
 React + TypeScript + Vite, Tailwind v4, shadcn/ui (`radix-nova` style, warm
 orange food-brand palette, light/dark via a `ThemeProvider` toggling `.dark`
 on `<html>`). Covers the full customer journey against the Phase 1–6 APIs:
@@ -112,7 +112,7 @@ hardened `RazorpayGateway.create_order` to turn a Razorpay auth failure
 (e.g. this repo's placeholder test keys) into a clean `PaymentError` instead
 of an unhandled 500.
 
-### Phase 8 — Staff frontends *(current)*
+### Phase 8 — Staff frontends
 Kitchen, delivery, and admin dashboards, wired to the Phase 6 APIs. Staff
 users share the customer login page (password or OTP) — `LoginPage` reads
 the returned user's role and redirects to `/kitchen`, `/delivery`, or
@@ -152,23 +152,77 @@ themselves reuse the same shadcn primitives (`Card`, `Dialog`, `Select`,
 `Switch`, `Badge`) already visually confirmed working in the Phase 7
 browser pass, plus a clean `tsc --noEmit`.
 
+### Phase 9 — Reviews, wishlist, notifications, admin analytics, CI *(current)*
+
+**Reviews** (`/foods/{id}/reviews`, `/reviews/{id}`, `/reviews/{id}/like`):
+rate 1–5 + optional comment, gated by `OrderRepository.has_delivered_order_with_food`
+(you can only review food from an order that actually reached `delivered`),
+one review per user per food, like/unlike toggle. Creating or deleting a
+review recomputes `Food.rating_avg`/`rating_count` incrementally rather than
+re-aggregating. Frontend: a `ReviewsDialog` opened from the star rating on
+every `FoodCard`, plus a per-item "rate your order" prompt on the order
+tracking page once it's `delivered`.
+
+**Wishlist** (`/wishlist`): add/list/remove, unique on
+(user, food). Frontend: heart toggle on `FoodCard`, a `/wishlist` page.
+
+**Notifications** (`/notifications`, `.../read`, `.../read-all`): a
+`Notification` row is created for the customer alongside the WebSocket
+broadcast on every order-status transition (kitchen accept/reject/prepare/
+ready, delivery pickup/on-the-way/deliver, admin force-cancel, customer
+self-cancel) — same commit, so the notification and the state change can't
+drift apart. Frontend: a bell in the navbar with an unread-count badge,
+30s-polled dropdown, mark-read on click.
+
+**Admin analytics** (`/admin/analytics/summary`): total revenue (delivered
+orders only) and order count, customer/delivery-partner counts, orders
+grouped by status, revenue for the last 7 days, top 5 best-selling foods by
+quantity — all plain aggregate SQL (`app/repositories/analytics_repository.py`),
+no new tables. Frontend: a new "Analytics" tab in the admin dashboard
+(Recharts bar charts — revenue by day in the brand primary hue, orders by
+status colored semantically: green for delivered, red for cancelled/
+refunded, primary for everything in progress — plus a best-sellers list).
+
+**Tooling that was still missing**: `eslint.config.js` (flat config,
+`typescript-eslint` + `eslint-plugin-react-hooks` + `eslint-plugin-react-refresh`)
+— found and fixed one real bug it caught (`MenuPage` was calling `setState`
+synchronously inside a bare `useEffect` to resync local input state from a
+URL param on external changes; replaced with the render-time "adjust state
+when a prop changes" pattern React recommends instead of an effect).
+A first Vitest slice (27 tests across format/utils/VegBadge/StarRatingInput/
+StatusTimeline/ThemeProvider/FoodCard) using mocked hooks rather than a full
+provider tree. A GitHub Actions workflow (`.github/workflows/ci.yml`) running
+backend pytest+ruff against real Postgres/Redis service containers, and
+frontend tsc+eslint+vitest+build, on every push/PR to `main`. A Postman
+collection (`docs/postman_collection.json`) generated from the live OpenAPI
+schema, organized by tag with collection-level bearer auth.
+
+Backend: 3 new repositories, 2 new services, 4 new routers, 14 new tests
+(116 total). One real bug found while wiring wishlist: `WishlistRepository.list_for_user`
+eager-loaded `WishlistItem.food` but not `Food.category`, and
+`FoodResponse.from_food` reads `food.category.name` — a lazy-load attempt
+outside the async context crashed with `MissingGreenlet` the first time a
+non-empty wishlist was serialized. Fixed by chaining the `selectinload`.
+
+Verified via the backend test suite (116 passing) and `curl` against the
+live API for the endpoints frontend code depends on; UI verification used
+`tsc --noEmit` + `eslint` + the new Vitest suite rather than a live browser
+pass, for the same shared-session reason as Phase 8.
+
 ## Not started yet
 
-- **Reviews, wishlist, notifications API** — models exist (`Review`,
-  `ReviewLike`, `WishlistItem`, `Notification`), no service/router yet.
-- **Admin analytics dashboard** — revenue/order charts, best-sellers,
-  monthly/yearly reports (the admin frontend has order oversight and
-  delivery-partner/menu management, but no charts — there's no analytics
-  API to draw from yet).
-- **Deployment** — Dockerfiles and docker-compose exist for local dev; no
-  CI workflow content beyond the `.github/workflows/` folder shell, no
-  Vercel/Render/Railway config, no Postman collection.
-- **Frontend test suite** — `vitest`/`@testing-library/react` are installed
-  but no component tests have been written yet; correctness so far has been
-  verified by hand in a real browser (customer flow) and via direct API
-  calls (staff dashboards), plus a full `tsc --noEmit` pass.
+- **Kitchen/delivery/admin frontend for reviews/wishlist/notifications** —
+  e.g. no way for an admin to moderate/delete other users' reviews from the
+  UI (the `DELETE /reviews/{id}` endpoint only allows the review's own
+  author, by design).
+- **Deployment** — Dockerfiles and docker-compose exist for local dev and
+  now there's a CI workflow, but no actual deploy target is configured
+  (Vercel/Render/Railway).
 - **Delivery-partner map picker / live map** — location is a lat/lng pair
   (geolocation-captured), not shown on an actual map anywhere yet.
+- **Email/push notifications** — the in-app `Notification` feed exists;
+  the `EmailService`/SMS provider stubs from Phase 1 aren't wired to order
+  events yet (only password-reset emails use `EmailService` today).
 
 ## Known gaps / accepted trade-offs
 
@@ -181,6 +235,12 @@ browser pass, plus a clean `tsc --noEmit`.
   this environment) — checkout captures the delivery location via the
   browser Geolocation API instead; a draggable-pin map picker is a
   drop-in addition once a key is available.
-- The frontend's `eslint` devDependency has no `eslint.config.js` in this
-  scaffold yet (pre-existing gap, not introduced by this phase) — `tsc
-  --noEmit` is the current type-safety gate.
+- Vitest coverage is a first slice (utilities, several presentational/
+  interactive components), not exhaustive — pages with heavy React Query +
+  routing + multiple provider dependencies (Checkout, OrderTracking) aren't
+  covered yet and would need a fuller test-provider wrapper to be worth it.
+- The production frontend bundle is a single ~1.1MB (332KB gzipped) chunk —
+  Vite warns about it (recharts + radix-ui + framer-motion all in the main
+  bundle). Works fine at this app's scale; splitting the admin analytics
+  chart bundle behind a dynamic `import()` would be the first thing to
+  reach for if load time on the customer-facing pages ever mattered.

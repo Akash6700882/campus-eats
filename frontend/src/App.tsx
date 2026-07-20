@@ -16,6 +16,7 @@ import { CheckoutPage } from "@/pages/customer/CheckoutPage";
 import { OrderTrackingPage } from "@/pages/customer/OrderTrackingPage";
 import { OrderHistoryPage } from "@/pages/customer/OrderHistoryPage";
 import { ProfilePage } from "@/pages/customer/ProfilePage";
+import { WishlistPage } from "@/pages/customer/WishlistPage";
 import { KitchenDashboardPage } from "@/pages/kitchen/KitchenDashboardPage";
 import { DeliveryDashboardPage } from "@/pages/delivery/DeliveryDashboardPage";
 import { AdminDashboardPage } from "@/pages/admin/AdminDashboardPage";
@@ -62,6 +63,14 @@ export default function App() {
                   element={
                     <ProtectedRoute>
                       <ProfilePage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/wishlist"
+                  element={
+                    <ProtectedRoute>
+                      <WishlistPage />
                     </ProtectedRoute>
                   }
                 />

@@ -5,13 +5,16 @@
 ```
 backend/app/
 ├── api/v1/          # FastAPI routers: auth, menu, addresses, cart, orders, coupons,
-│                    #   payments, kitchen, delivery, admin_orders, ws
+│                    #   payments, kitchen, delivery, admin_orders, analytics, reviews,
+│                    #   wishlist, notifications, ws
 ├── core/            # config, db session, security (password hashing), DI helpers
 ├── models/          # SQLAlchemy 2.0 models — source of truth for schema, migrated via Alembic
 ├── schemas/         # Pydantic request/response schemas (added alongside each router)
 ├── repositories/     # Data-access layer: one class per model, extends BaseRepository
+│                      #   (+ analytics_repository.py, a plain aggregate-query repo with no model)
 ├── services/         # Business logic layer (coupon rules, geofence checks, pricing,
-│                      #   order state machine, delivery-partner assignment...)
+│                      #   order state machine, delivery-partner assignment, review
+│                      #   rating recompute, order-status notifications...)
 ├── ws/               # In-memory WebSocket connection manager + order-event broadcasting
 └── tasks/            # Celery app + tasks (notification dispatch, analytics rollups — not yet used)
 ```
@@ -71,6 +74,39 @@ the admin frontend can look up `delivery`-role users to promote to a
 `DeliveryPartner` profile — there's no general user-management API beyond
 this one filtered lookup.
 
+Every router that drives a transition (`orders.cancel`, all of `kitchen.*`,
+all of `delivery.*`, `admin_orders.force_cancel`/`assign_delivery_partner`)
+creates the customer-facing `Notification` row (`NotificationService.notify_order_status`,
+a static status→(title, message) map) in the *same* try block and commit as
+the state change itself, right alongside the `broadcast_order_event()` call
+— so a notification is never left dangling from a status the order didn't
+actually reach, and never silently skipped if the commit fails.
+
+## Reviews & wishlist
+
+A review requires `OrderRepository.has_delivered_order_with_food(user_id,
+food_id)` — a join across `orders`/`order_items` checking for a `delivered`
+order containing that food — before `ReviewService.create_review` will
+accept it; one review per (user, food), enforced at the service layer (no
+DB unique constraint, so it's a check-then-insert — acceptable at this
+app's concurrency). Creating/deleting a review adjusts `Food.rating_avg`/
+`rating_count` with an incremental weighted-average formula rather than
+re-aggregating all reviews on every write.
+
+Wishlist add is idempotent (`POST /wishlist/{food_id}` on an already-wishlisted
+food just returns the existing row rather than erroring) — simpler for the
+frontend's optimistic heart-toggle than surfacing a 409.
+
+## Admin analytics
+
+`AnalyticsRepository` (`app/repositories/analytics_repository.py`) is a thin
+collection of plain aggregate queries — no model of its own, just `Order`/
+`OrderItem` grouped by status/day/food. `GET /admin/analytics/summary`
+assembles those plus `UserRepository.count_by_role("customer")` and the
+delivery-partner count into one response. All dollar figures are computed
+from `delivered` orders only, deliberately excluding pending/cancelled
+orders from revenue.
+
 ## Live updates (WebSockets)
 
 `app/ws/manager.py` is a single-process, in-memory pub/sub keyed by channel
@@ -97,16 +133,31 @@ Redis pub/sub (Redis is already a dependency for OTP/rate-limiting).
 api/         # Thin axios wrappers, one file per backend resource (auth, menu, cart, orders...)
 components/
   ui/        # shadcn/ui primitives — generated, owned/patched in-place (see note below)
-  layout/    # Navbar, Footer, AppLayout
-  food/      # FoodCard, FoodRow, CategoryChips, VegBadge
+  layout/    # Navbar, Footer, AppLayout, NotificationsBell
+  food/      # FoodCard, FoodRow, CategoryChips, VegBadge, ReviewsDialog, StarRatingInput
   address/   # AddressForm (shared by checkout and profile)
-  order/     # StatusTimeline
-hooks/       # React Query hooks per resource (useCart, useMenu, useOrders, useAddresses...)
+  order/     # StatusTimeline, RateOrderItem
+hooks/       # React Query hooks per resource (useCart, useMenu, useOrders, useAddresses,
+             #   useWishlist, useReviews, useNotifications, useAnalytics, useKitchen,
+             #   useDelivery, useAdmin...)
 lib/         # api.ts (axios instance + refresh interceptor), queryClient, format, razorpay, utils
-pages/customer/  # One component per route
+pages/
+  customer/  # One component per customer-facing route
+  kitchen/   # Kitchen dashboard
+  delivery/  # Delivery dashboard
+  admin/     # Admin dashboard (tabs: analytics, orders, partners, menu)
 store/       # AuthProvider, ThemeProvider (React Context, not Redux/Zustand — small enough)
+test/        # Vitest setup (jest-dom matchers)
 types/       # Hand-written TS types mirroring the backend Pydantic schemas
 ```
+
+Tests live next to the file they cover (`Foo.tsx` + `Foo.test.tsx`), run via
+`npm test` (Vitest + Testing Library, jsdom environment, configured in the
+`test` block of `vite.config.ts`). Components with several React Query/
+context dependencies (e.g. `FoodCard`, which pulls in cart, wishlist, auth,
+and reviews hooks) mock those hooks at the module level with `vi.mock`
+rather than standing up the full provider tree — keeps the tests fast and
+focused on the component's own logic, not its dependencies'.
 
 Data flow: page → React Query hook → `api/*.ts` → axios instance (`lib/api.ts`)
 with a request interceptor attaching the bearer token and a response

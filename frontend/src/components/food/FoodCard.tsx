@@ -1,18 +1,36 @@
 import { useState } from "react";
-import { Clock, Minus, Plus, Star, UtensilsCrossed } from "lucide-react";
+import { Clock, Heart, Minus, Plus, Star, UtensilsCrossed } from "lucide-react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { VegBadge } from "@/components/food/VegBadge";
+import { ReviewsDialog } from "@/components/food/ReviewsDialog";
 import { useCartMutations } from "@/hooks/useCart";
+import { useWishlist, useWishlistMutations } from "@/hooks/useWishlist";
+import { useAuth } from "@/store/auth";
+import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/format";
 import type { Food } from "@/types";
 
 export function FoodCard({ food }: { food: Food }) {
   const [quantity, setQuantity] = useState(1);
   const { addItem } = useCartMutations();
+  const { isAuthenticated } = useAuth();
+  const { data: wishlist } = useWishlist();
+  const { add, remove } = useWishlistMutations();
 
   const hasDiscount = food.discount_percent > 0;
+  const wishlistItem = wishlist?.find((w) => w.food.id === food.id);
+
+  function toggleWishlist() {
+    if (!isAuthenticated) {
+      toast.error("Sign in to save favourites");
+      return;
+    }
+    if (wishlistItem) remove.mutate(food.id);
+    else add.mutate(food.id);
+  }
 
   return (
     <Card className="flex h-full flex-col">
@@ -28,11 +46,19 @@ export function FoodCard({ food }: { food: Food }) {
           {food.is_special_today && <Badge className="bg-primary text-primary-foreground">Today&apos;s Special</Badge>}
           {food.is_popular && <Badge variant="secondary">Popular</Badge>}
         </div>
-        {hasDiscount && (
-          <Badge className="absolute right-2 top-2 bg-success text-success-foreground">
-            {food.discount_percent}% off
-          </Badge>
-        )}
+        <div className="absolute right-2 top-2 flex flex-col items-end gap-1">
+          <button
+            type="button"
+            onClick={toggleWishlist}
+            aria-label={wishlistItem ? "Remove from wishlist" : "Add to wishlist"}
+            className="flex h-7 w-7 items-center justify-center rounded-full bg-background/90 shadow-sm transition-colors hover:bg-background"
+          >
+            <Heart className={cn("h-3.5 w-3.5", wishlistItem ? "fill-destructive text-destructive" : "text-muted-foreground")} />
+          </button>
+          {hasDiscount && (
+            <Badge className="bg-success text-success-foreground">{food.discount_percent}% off</Badge>
+          )}
+        </div>
         {!food.is_available && (
           <div className="absolute inset-0 flex items-center justify-center bg-background/80">
             <Badge variant="outline">Currently unavailable</Badge>
@@ -46,12 +72,12 @@ export function FoodCard({ food }: { food: Food }) {
             <VegBadge isVeg={food.is_veg} />
             <h3 className="font-heading text-sm font-semibold leading-tight">{food.name}</h3>
           </div>
-          {food.rating_count > 0 && (
-            <span className="flex shrink-0 items-center gap-0.5 text-xs font-medium text-muted-foreground">
+          <ReviewsDialog food={food}>
+            <button type="button" className="flex shrink-0 items-center gap-0.5 text-xs font-medium text-muted-foreground hover:text-foreground">
               <Star className="h-3 w-3 fill-primary text-primary" />
-              {food.rating_avg.toFixed(1)}
-            </span>
-          )}
+              {food.rating_count > 0 ? food.rating_avg.toFixed(1) : "New"}
+            </button>
+          </ReviewsDialog>
         </div>
 
         {food.description && <p className="line-clamp-2 text-xs text-muted-foreground">{food.description}</p>}
@@ -76,13 +102,20 @@ export function FoodCard({ food }: { food: Food }) {
             type="button"
             variant="ghost"
             size="icon-sm"
+            aria-label="Decrease quantity"
             disabled={quantity <= 1}
             onClick={() => setQuantity((q) => Math.max(1, q - 1))}
           >
             <Minus className="h-3.5 w-3.5" />
           </Button>
           <span className="w-6 text-center text-sm font-medium">{quantity}</span>
-          <Button type="button" variant="ghost" size="icon-sm" onClick={() => setQuantity((q) => Math.min(20, q + 1))}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Increase quantity"
+            onClick={() => setQuantity((q) => Math.min(20, q + 1))}
+          >
             <Plus className="h-3.5 w-3.5" />
           </Button>
         </div>
