@@ -53,8 +53,10 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="container flex h-16 items-center gap-4">
-        <Link to={logoHref} className="flex shrink-0 items-center gap-2 font-heading text-lg font-bold">
-          <UtensilsCrossed className="h-6 w-6 text-primary" />
+        <Link to={logoHref} className="group flex shrink-0 items-center gap-2 font-heading text-lg font-bold">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 transition-transform duration-200 group-hover:rotate-12">
+            <UtensilsCrossed className="h-4.5 w-4.5 text-primary" />
+          </span>
           <span className="hidden sm:inline">Campus Eats</span>
           {isStaff && (
             <Badge variant="secondary" className="ml-1 capitalize">

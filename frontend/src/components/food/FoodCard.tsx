@@ -33,10 +33,15 @@ export function FoodCard({ food }: { food: Food }) {
   }
 
   return (
-    <Card className="flex h-full flex-col">
+    <Card className="group flex h-full flex-col transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
         {food.image_url ? (
-          <img src={food.image_url} alt={food.name} className="h-full w-full object-cover" loading="lazy" />
+          <img
+            src={food.image_url}
+            alt={food.name}
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            loading="lazy"
+          />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-muted-foreground">
             <UtensilsCrossed className="h-10 w-10" />
@@ -44,7 +49,7 @@ export function FoodCard({ food }: { food: Food }) {
         )}
         <div className="absolute left-2 top-2 flex flex-wrap gap-1">
           {food.is_special_today && <Badge className="bg-primary text-primary-foreground">Today&apos;s Special</Badge>}
-          {food.is_popular && <Badge variant="secondary">Popular</Badge>}
+          {food.is_popular && <Badge className="bg-gold text-gold-foreground">Popular</Badge>}
         </div>
         <div className="absolute right-2 top-2 flex flex-col items-end gap-1">
           <button
