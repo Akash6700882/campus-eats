@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/store/theme";
 import { AuthProvider } from "@/store/auth";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { RoleProtectedRoute } from "@/components/RoleProtectedRoute";
 import { HomePage } from "@/pages/customer/HomePage";
 import { LoginPage } from "@/pages/customer/LoginPage";
 import { SignupPage } from "@/pages/customer/SignupPage";
@@ -15,6 +16,9 @@ import { CheckoutPage } from "@/pages/customer/CheckoutPage";
 import { OrderTrackingPage } from "@/pages/customer/OrderTrackingPage";
 import { OrderHistoryPage } from "@/pages/customer/OrderHistoryPage";
 import { ProfilePage } from "@/pages/customer/ProfilePage";
+import { KitchenDashboardPage } from "@/pages/kitchen/KitchenDashboardPage";
+import { DeliveryDashboardPage } from "@/pages/delivery/DeliveryDashboardPage";
+import { AdminDashboardPage } from "@/pages/admin/AdminDashboardPage";
 
 export default function App() {
   return (
@@ -59,6 +63,30 @@ export default function App() {
                     <ProtectedRoute>
                       <ProfilePage />
                     </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/kitchen"
+                  element={
+                    <RoleProtectedRoute roles={["kitchen", "admin"]}>
+                      <KitchenDashboardPage />
+                    </RoleProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/delivery"
+                  element={
+                    <RoleProtectedRoute roles={["delivery", "admin"]}>
+                      <DeliveryDashboardPage />
+                    </RoleProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin"
+                  element={
+                    <RoleProtectedRoute roles={["admin"]}>
+                      <AdminDashboardPage />
+                    </RoleProtectedRoute>
                   }
                 />
               </Routes>

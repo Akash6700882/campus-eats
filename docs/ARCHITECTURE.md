@@ -66,6 +66,11 @@ address) and generates the 6-digit `delivery_otp` the customer reads out to
 the delivery partner on handoff — staff-facing `OrderResponse`s always pass
 `reveal_otp=False` so the OTP never leaks to kitchen/delivery views.
 
+`GET /admin/users?role=` (`UserRepository.list_by_role`) exists purely so
+the admin frontend can look up `delivery`-role users to promote to a
+`DeliveryPartner` profile — there's no general user-management API beyond
+this one filtered lookup.
+
 ## Live updates (WebSockets)
 
 `app/ws/manager.py` is a single-process, in-memory pub/sub keyed by channel

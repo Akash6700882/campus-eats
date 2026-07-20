@@ -78,3 +78,17 @@ class AdminCancelRequest(BaseModel):
 
 class AdminAssignPartnerRequest(BaseModel):
     delivery_partner_id: uuid.UUID
+
+
+class AdminUserResponse(BaseModel):
+    id: uuid.UUID
+    full_name: str
+    email: str
+    phone: str
+    role: str
+
+    @staticmethod
+    def from_user(user) -> "AdminUserResponse":
+        return AdminUserResponse(
+            id=user.id, full_name=user.full_name, email=user.email, phone=user.phone, role=user.role.name
+        )

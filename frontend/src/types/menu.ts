@@ -40,3 +40,25 @@ export interface FoodSearchParams {
   limit?: number;
   offset?: number;
 }
+
+export interface CategoryInput {
+  name: string;
+  description?: string | null;
+  image_url?: string | null;
+  sort_order?: number;
+  is_active?: boolean;
+}
+
+export interface FoodInput {
+  category_id: string;
+  name: string;
+  description?: string | null;
+  image_url?: string | null;
+  price: number;
+  discount_percent?: number;
+  is_veg?: boolean;
+  prep_time_minutes?: number;
+  is_available?: boolean;
+  is_popular?: boolean;
+  is_special_today?: boolean;
+}

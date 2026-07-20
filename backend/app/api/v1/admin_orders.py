@@ -2,11 +2,12 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.core.deps import DbSession, DeliveryPartnerRepo, DeliveryPartnerSvc, OrderRepo, OrderSvc, require_role
+from app.core.deps import DbSession, DeliveryPartnerRepo, DeliveryPartnerSvc, OrderRepo, OrderSvc, UserRepo, require_role
 from app.models.enums import OrderStatus, RoleName
 from app.schemas.delivery import (
     AdminAssignPartnerRequest,
     AdminCancelRequest,
+    AdminUserResponse,
     DeliveryPartnerCreateRequest,
     DeliveryPartnerResponse,
 )
@@ -64,6 +65,12 @@ async def assign_delivery_partner(
         raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
     await broadcast_order_event(order, "order.assigned")
     return await _reload(order_id, order_repo)
+
+
+@router.get("/admin/users", response_model=list[AdminUserResponse], dependencies=[RequireAdmin])
+async def list_users_by_role(user_repo: UserRepo, role: RoleName = Query()) -> list[AdminUserResponse]:
+    users = await user_repo.list_by_role(role.value)
+    return [AdminUserResponse.from_user(u) for u in users]
 
 
 @router.get(

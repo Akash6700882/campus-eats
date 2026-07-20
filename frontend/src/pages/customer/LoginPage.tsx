@@ -13,6 +13,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/store/auth";
 import { apiErrorMessage } from "@/lib/api";
 import { authApi } from "@/api/auth";
+import type { Role } from "@/types";
+
+function dashboardForRole(role: Role, fallback: string): string {
+  if (role === "admin") return "/admin";
+  if (role === "kitchen") return "/kitchen";
+  if (role === "delivery") return "/delivery";
+  return fallback;
+}
 
 const passwordSchema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -41,9 +49,9 @@ export function LoginPage() {
 
   async function onPasswordSubmit(values: PasswordForm) {
     try {
-      await login(values.email, values.password);
+      const user = await login(values.email, values.password);
       toast.success("Welcome back!");
-      navigate(redirectTo, { replace: true });
+      navigate(dashboardForRole(user.role, redirectTo), { replace: true });
     } catch (err) {
       toast.error(apiErrorMessage(err, "Invalid email or password"));
     }
@@ -63,9 +71,9 @@ export function LoginPage() {
   async function onVerifyOtp() {
     setOtpSubmitting(true);
     try {
-      await loginWithOtp(otpPhone, otpCode);
+      const user = await loginWithOtp(otpPhone, otpCode);
       toast.success("Welcome back!");
-      navigate(redirectTo, { replace: true });
+      navigate(dashboardForRole(user.role, redirectTo), { replace: true });
     } catch (err) {
       toast.error(apiErrorMessage(err, "Invalid or expired OTP"));
     } finally {

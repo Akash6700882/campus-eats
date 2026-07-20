@@ -112,20 +112,63 @@ hardened `RazorpayGateway.create_order` to turn a Razorpay auth failure
 (e.g. this repo's placeholder test keys) into a clean `PaymentError` instead
 of an unhandled 500.
 
+### Phase 8 — Staff frontends *(current)*
+Kitchen, delivery, and admin dashboards, wired to the Phase 6 APIs. Staff
+users share the customer login page (password or OTP) — `LoginPage` reads
+the returned user's role and redirects to `/kitchen`, `/delivery`, or
+`/admin` instead of home; `RoleProtectedRoute` guards those routes and the
+`Navbar` switches to a stripped-down staff mode (no search/cart/menu, just
+a "Dashboard" link) once logged in as non-customer.
+
+- **Kitchen** (`/kitchen`): a 4-column queue (new / accepted / preparing /
+  ready) with accept, reject (reason dialog), start-preparing, mark-ready
+  actions; shows the assigned delivery partner once auto-assignment fires.
+  Customer OTP is never fetched into this view.
+- **Delivery** (`/delivery`): today's earnings/deliveries/rating, an
+  availability toggle, a "update my location" geolocation button, and the
+  assigned-order queue with pickup → start-delivery → confirm-delivery
+  (OTP entry dialog) actions.
+- **Admin** (`/admin`): three tabs — **Orders** (status-filterable list,
+  force-cancel with reason, manual delivery-partner assignment for
+  unassigned `ready` orders), **Delivery partners** (roster with
+  availability/rating/earnings, create a profile for a `delivery`-role
+  user), **Menu** (category/food CRUD reusing the existing admin API).
+
+Added one small backend endpoint to support this: `GET /admin/users?role=`
+(`UserRepository.list_by_role`, `AdminUserResponse`) — there was previously
+no way for an admin to look up which `delivery`-role users exist to promote
+to a delivery-partner profile. Covered by two new tests (role-gating +
+happy path); full suite is 102 tests.
+
+Verified functionally end-to-end via direct API calls against the live
+backend (not the browser UI this time — the dev browser session had the
+user's own real in-progress order in it, so verification used isolated
+test accounts and a throwaway order instead of risking that session):
+kitchen accept → start-preparing → ready (confirmed auto-assignment),
+delivery pickup → on-the-way → deliver with the real OTP fetched from the
+customer's own view, delivery-partner stats incrementing correctly after
+delivery, and admin list/filter + force-cancel. The dashboard components
+themselves reuse the same shadcn primitives (`Card`, `Dialog`, `Select`,
+`Switch`, `Badge`) already visually confirmed working in the Phase 7
+browser pass, plus a clean `tsc --noEmit`.
+
 ## Not started yet
 
 - **Reviews, wishlist, notifications API** — models exist (`Review`,
   `ReviewLike`, `WishlistItem`, `Notification`), no service/router yet.
 - **Admin analytics dashboard** — revenue/order charts, best-sellers,
-  customer/delivery-partner management UI, monthly/yearly reports.
-- **Kitchen/delivery/admin frontend** — those APIs (Phase 6) have no UI yet;
-  `frontend/src/pages/{kitchen,delivery,admin}` are still empty directories.
+  monthly/yearly reports (the admin frontend has order oversight and
+  delivery-partner/menu management, but no charts — there's no analytics
+  API to draw from yet).
 - **Deployment** — Dockerfiles and docker-compose exist for local dev; no
   CI workflow content beyond the `.github/workflows/` folder shell, no
   Vercel/Render/Railway config, no Postman collection.
 - **Frontend test suite** — `vitest`/`@testing-library/react` are installed
   but no component tests have been written yet; correctness so far has been
-  verified by hand in a real browser plus a full `tsc --noEmit` pass.
+  verified by hand in a real browser (customer flow) and via direct API
+  calls (staff dashboards), plus a full `tsc --noEmit` pass.
+- **Delivery-partner map picker / live map** — location is a lat/lng pair
+  (geolocation-captured), not shown on an actual map anywhere yet.
 
 ## Known gaps / accepted trade-offs
 

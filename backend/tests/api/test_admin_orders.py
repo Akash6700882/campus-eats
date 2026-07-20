@@ -58,6 +58,21 @@ async def test_admin_cannot_cancel_delivered_order(
     assert resp.status_code == 409
 
 
+async def test_admin_lists_users_by_role(client, admin_headers, delivery_user, kitchen_headers):
+    delivery_user_obj, _ = delivery_user
+
+    resp = await client.get("/api/v1/admin/users?role=delivery", headers=admin_headers)
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert any(u["id"] == str(delivery_user_obj.id) for u in body)
+    assert all(u["role"] == "delivery" for u in body)
+
+
+async def test_non_admin_cannot_list_users_by_role(client, kitchen_headers):
+    resp = await client.get("/api/v1/admin/users?role=delivery", headers=kitchen_headers)
+    assert resp.status_code == 403
+
+
 async def test_create_delivery_partner_requires_delivery_role(client, admin_headers, customer_headers):
     me = (await client.get("/api/v1/auth/me", headers=customer_headers)).json()
     resp = await client.post(
