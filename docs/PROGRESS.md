@@ -209,6 +209,44 @@ live API for the endpoints frontend code depends on; UI verification used
 `tsc --noEmit` + `eslint` + the new Vitest suite rather than a live browser
 pass, for the same shared-session reason as Phase 8.
 
+### Phase 10 — Real campus geofence and Google Maps integration
+
+**Geofence**: the campus `DeliveryZone` was a placeholder square around a
+generic Bangalore coordinate. Replaced with the real IIT Guwahati campus
+boundary (OSM way `52435139`, 101-point polygon fetched via Nominatim,
+cross-checked against Wikipedia's stated campus area — ~661 acres computed
+from the polygon vs. ~704 acres from Wikipedia, within 6%). `backend/scripts/seed.py`
+now upserts this onto whatever zone is currently active, so re-running it
+against an already-seeded dev DB fixes the old placeholder in place rather
+than creating a duplicate active zone.
+
+**New `/delivery-zone` endpoints**: `GET /delivery-zone` (public — powers the
+checkout map's zone overlay) and `PUT /admin/delivery-zone` (admin-only,
+validates the submitted GeoJSON is a well-formed, non-self-intersecting
+Polygon via shapely before saving). `DeliveryZoneRepository.get_first_active`
+added since there's only ever one "main" active zone. 7 new tests.
+
+**Google Maps JS integration** (`@react-google-maps/api`, already a
+dependency, previously unused):
+- **Checkout map picker** (`CampusMapPicker`): a draggable-pin map bounded to
+  the campus area (`restriction` + `strictBounds`), overlaying the real zone
+  polygon, alongside — not replacing — the existing browser-geolocation
+  button in `AddressForm`.
+- **Admin geofence editor** (new "Delivery zone" tab, `DeliveryZoneEditor`):
+  drag existing boundary points to adjust them, or draw an entirely new
+  polygon via the Drawing library, then save.
+- **Delivery partner live map** (`DeliveryLiveMap` in the delivery
+  dashboard): shows the partner's last-reported lat/lng as a marker instead
+  of just the raw pair.
+
+All three degrade to a plain text notice instead of crashing when
+`VITE_GOOGLE_MAPS_API_KEY` is unset (covered by a Vitest test against the
+real current empty-key dev state) — no live-browser pass was possible in
+this environment (no Playwright/chromium-cli/Chrome MCP available on
+Windows here), so rendering with a real key is unverified; typecheck,
+eslint, the full backend (123) and frontend (28) test suites, and a
+production build all pass.
+
 ## Not started yet
 
 - **Kitchen/delivery/admin frontend for reviews/wishlist/notifications** —
@@ -218,8 +256,6 @@ pass, for the same shared-session reason as Phase 8.
 - **Deployment** — Dockerfiles and docker-compose exist for local dev and
   now there's a CI workflow, but no actual deploy target is configured
   (Vercel/Render/Railway).
-- **Delivery-partner map picker / live map** — location is a lat/lng pair
-  (geolocation-captured), not shown on an actual map anywhere yet.
 - **Email/push notifications** — the in-app `Notification` feed exists;
   the `EmailService`/SMS provider stubs from Phase 1 aren't wired to order
   events yet (only password-reset emails use `EmailService` today).
@@ -231,16 +267,17 @@ pass, for the same shared-session reason as Phase 8.
   scale, would need a routing API for anything larger.
 - WebSocket fan-out is in-process only (see above) — a real multi-worker
   deployment needs Redis pub/sub or similar wired into `app/ws/manager.py`.
-- No Google Maps integration yet (`VITE_GOOGLE_MAPS_API_KEY` is unset in
-  this environment) — checkout captures the delivery location via the
-  browser Geolocation API instead; a draggable-pin map picker is a
-  drop-in addition once a key is available.
+- The IIT Guwahati geofence polygon is crowd-sourced OSM data, not an
+  official surveyed boundary — good for "is this address roughly on
+  campus," not survey-grade precision right at the fence line. Admins can
+  refine it directly via the new "Delivery zone" admin tab.
 - Vitest coverage is a first slice (utilities, several presentational/
   interactive components), not exhaustive — pages with heavy React Query +
   routing + multiple provider dependencies (Checkout, OrderTracking) aren't
   covered yet and would need a fuller test-provider wrapper to be worth it.
-- The production frontend bundle is a single ~1.1MB (332KB gzipped) chunk —
-  Vite warns about it (recharts + radix-ui + framer-motion all in the main
-  bundle). Works fine at this app's scale; splitting the admin analytics
-  chart bundle behind a dynamic `import()` would be the first thing to
-  reach for if load time on the customer-facing pages ever mattered.
+- The production frontend bundle is a single ~1.28MB (368KB gzipped) chunk —
+  Vite warns about it (recharts + radix-ui + framer-motion + @react-google-maps/api
+  all in the main bundle). Works fine at this app's scale; splitting the
+  admin analytics chart and map components behind dynamic `import()` would
+  be the first thing to reach for if load time on the customer-facing pages
+  ever mattered.

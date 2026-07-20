@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAddressMutations } from "@/hooks/useAddresses";
+import { CampusMapPicker } from "@/components/map/CampusMapPicker";
 import type { Address } from "@/types";
 
 const addressSchema = z.object({
@@ -104,17 +105,21 @@ export function AddressForm({ onCreated }: { onCreated?: (address: Address) => v
         <Textarea id="notes" placeholder="e.g. Near the west gate, ask for room 204" {...register("notes")} />
       </div>
 
-      <div className="rounded-lg border border-dashed border-input p-3">
+      <div className="space-y-2 rounded-lg border border-dashed border-input p-3">
+        <p className="text-xs text-muted-foreground">
+          Drag the pin to your exact spot on campus, or use your current location.
+        </p>
+        <CampusMapPicker value={coords} onChange={setCoords} />
         <Button type="button" variant="outline" size="sm" onClick={captureLocation} disabled={locating}>
           {locating ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
           {coords ? "Update my location" : "Use my current location"}
         </Button>
         {coords && (
-          <p className="mt-2 text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Location captured ({coords.latitude.toFixed(5)}, {coords.longitude.toFixed(5)})
           </p>
         )}
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           We only deliver inside campus — your location is checked against the campus boundary at checkout.
         </p>
       </div>

@@ -27,6 +27,7 @@ from app.services.auth_service import AuthService
 from app.services.cart_service import CartService
 from app.services.coupon_service import CouponService
 from app.services.delivery_service import DeliveryPartnerService
+from app.services.delivery_zone_service import DeliveryZoneService
 from app.services.email_service import EmailService
 from app.services.image_service import ImageService
 from app.services.menu_service import MenuService
@@ -174,6 +175,13 @@ def get_delivery_partner_service(
 
 def get_review_service(review_repo: ReviewRepo, food_repo: FoodRepo, order_repo: OrderRepo) -> ReviewService:
     return ReviewService(review_repo, food_repo, order_repo)
+
+
+def get_delivery_zone_service(delivery_zone_repo: DeliveryZoneRepo) -> DeliveryZoneService:
+    return DeliveryZoneService(delivery_zone_repo)
+
+
+DeliveryZoneSvc = Annotated[DeliveryZoneService, Depends(get_delivery_zone_service)]
 
 
 def get_notification_service(notification_repo: NotificationRepo) -> NotificationService:

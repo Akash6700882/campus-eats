@@ -22,3 +22,16 @@ export interface DeliveryPartnerCreateInput {
   user_id: string;
   vehicle_number?: string | null;
 }
+
+export interface DeliveryZone {
+  id: string;
+  name: string;
+  /** GeoJSON Polygon, serialized — coordinates are [lng, lat] pairs per spec. */
+  polygon_geojson: string;
+  is_active: boolean;
+}
+
+export interface DeliveryZoneUpdateInput {
+  name: string;
+  polygon_geojson: string;
+}

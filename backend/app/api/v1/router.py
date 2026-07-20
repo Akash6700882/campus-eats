@@ -7,6 +7,7 @@ from app.api.v1.auth import router as auth_router
 from app.api.v1.cart import router as cart_router
 from app.api.v1.coupons import router as coupons_router
 from app.api.v1.delivery import router as delivery_router
+from app.api.v1.delivery_zone import router as delivery_zone_router
 from app.api.v1.kitchen import router as kitchen_router
 from app.api.v1.menu import router as menu_router
 from app.api.v1.notifications import router as notifications_router
@@ -26,6 +27,7 @@ api_router.include_router(coupons_router)
 api_router.include_router(payments_router)
 api_router.include_router(kitchen_router)
 api_router.include_router(delivery_router)
+api_router.include_router(delivery_zone_router)
 api_router.include_router(admin_orders_router)
 api_router.include_router(analytics_router)
 api_router.include_router(reviews_router)

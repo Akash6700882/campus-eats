@@ -117,23 +117,46 @@ FOODS = [
     ("Rose Milk", "juices-beverages", 40, True, 5, "Chilled milk flavoured with rose syrup.", False, False, "https://upload.wikimedia.org/wikipedia/commons/8/85/Faluda.JPG"),
 ]
 
-# Placeholder campus geofence — approx a 3.2km half-width square (~10,000 acres)
-# around a generic sample coordinate. Replace with the real campus GIS
-# boundary in the admin delivery-zone editor (Phase 7) once available.
-CAMPUS_CENTER = (12.9716, 77.5946)
-_HALF_WIDTH_DEG = 0.029
+CAMPUS_ZONE_NAME = "IIT Guwahati Campus"
+
+# Real IIT Guwahati campus boundary — OSM way 52435139 (amenity=university),
+# fetched via Nominatim (polygon_geojson=1) and verified against Wikipedia's
+# stated campus area (703.95 acres): this polygon encloses ~661 acres, within
+# ~6% of that figure. [lng, lat] pairs per GeoJSON. Crowd-sourced OSM data, not
+# an official surveyed boundary — good enough for "is this address on campus,"
+# not survey-grade precision at the fence line.
+IIT_GUWAHATI_POLYGON = [
+    [91.6860336, 26.1907383], [91.6869961, 26.188822], [91.6871906, 26.1887857], [91.6876201, 26.1889114],
+    [91.6879701, 26.1886482], [91.6879338, 26.1884217], [91.6879575, 26.1881055], [91.6878401, 26.1879838],
+    [91.6877986, 26.1878973], [91.687805, 26.1877978], [91.6879057, 26.187628], [91.6880152, 26.1875013],
+    [91.6881628, 26.187464], [91.6882875, 26.1875032], [91.688373, 26.1875588], [91.6884173, 26.1876044],
+    [91.6885038, 26.1875984], [91.6885602, 26.1875486], [91.6885697, 26.1868499], [91.688496, 26.1867793],
+    [91.6882907, 26.1861138], [91.6882277, 26.18577], [91.6882039, 26.1854505], [91.6880991, 26.184974],
+    [91.6877908, 26.1850028], [91.6876442, 26.1842111], [91.6878388, 26.1841867], [91.6879127, 26.1844508],
+    [91.6883143, 26.1845664], [91.6887774, 26.1845342], [91.6890297, 26.1844118], [91.689097, 26.1839997],
+    [91.6889776, 26.1836908], [91.6886659, 26.1834841], [91.6892295, 26.1828537], [91.6907643, 26.1828665],
+    [91.6907517, 26.1825515], [91.6919667, 26.1825645], [91.6942149, 26.1823597], [91.6954533, 26.1829844],
+    [91.6960507, 26.1833633], [91.6961716, 26.18344], [91.6972615, 26.1838702], [91.6983454, 26.1841817],
+    [91.6984266, 26.1842675], [91.6987423, 26.1843662], [91.6986736, 26.1846903], [91.6993897, 26.1849478],
+    [91.6995787, 26.185239], [91.6996683, 26.1852584], [91.699633, 26.1854985], [91.7001382, 26.1855322],
+    [91.7001322, 26.1857592], [91.7003543, 26.1857748], [91.7002692, 26.1863634], [91.7005867, 26.1864288],
+    [91.7007131, 26.186439], [91.7008878, 26.1864798], [91.7011355, 26.1865429], [91.7011705, 26.1876173],
+    [91.7017054, 26.1878701], [91.7032221, 26.1884086], [91.7032394, 26.1886021], [91.7032048, 26.1887766],
+    [91.7042369, 26.1890344], [91.7038741, 26.1899702], [91.7038142, 26.19041], [91.703592, 26.1904727],
+    [91.7033674, 26.1909644], [91.7032217, 26.1916938], [91.7028088, 26.191687], [91.7028387, 26.1932637],
+    [91.7027258, 26.1963039], [91.7026511, 26.1979115], [91.7017923, 26.1973709], [91.7013798, 26.1971565],
+    [91.7010097, 26.1970918], [91.700608, 26.19695], [91.7005196, 26.1969094], [91.7004708, 26.196887],
+    [91.7004586, 26.1967565], [91.6995071, 26.1966866], [91.6989596, 26.1967208], [91.698782, 26.1972953],
+    [91.6987872, 26.1984653], [91.6987814, 26.1988156], [91.6987921, 26.1989906], [91.6975047, 26.2018409],
+    [91.6914462, 26.2006016], [91.6912617, 26.2005445], [91.6911165, 26.2004252], [91.6900889, 26.1985426],
+    [91.6894991, 26.1987565], [91.6875529, 26.1979566], [91.6875634, 26.1971261], [91.6874281, 26.1964215],
+    [91.687402, 26.1961487], [91.6872113, 26.1959634], [91.6871987, 26.195455], [91.6866486, 26.193324],
+    [91.6860336, 26.1907383],
+]
 
 
-def _placeholder_campus_polygon() -> str:
-    lat, lng = CAMPUS_CENTER
-    coords = [
-        [lng - _HALF_WIDTH_DEG, lat - _HALF_WIDTH_DEG],
-        [lng + _HALF_WIDTH_DEG, lat - _HALF_WIDTH_DEG],
-        [lng + _HALF_WIDTH_DEG, lat + _HALF_WIDTH_DEG],
-        [lng - _HALF_WIDTH_DEG, lat + _HALF_WIDTH_DEG],
-        [lng - _HALF_WIDTH_DEG, lat - _HALF_WIDTH_DEG],
-    ]
-    return json.dumps({"type": "Polygon", "coordinates": [coords]})
+def _campus_polygon() -> str:
+    return json.dumps({"type": "Polygon", "coordinates": [IIT_GUWAHATI_POLYGON]})
 
 
 def _slugify(name: str) -> str:
@@ -219,18 +242,25 @@ async def seed() -> None:
         if backfilled_images:
             print(f"Backfilled image_url on {backfilled_images} existing food items")
 
-        # Placeholder campus delivery zone
-        result = await session.execute(select(DeliveryZone).where(DeliveryZone.name == "Main Campus (placeholder)"))
-        zone = result.scalar_one_or_none()
+        # Campus delivery zone — there's only ever one "main" active zone, so
+        # look up any active zone rather than by name (an earlier seed run may
+        # have created one under an old placeholder name).
+        result = await session.execute(select(DeliveryZone).where(DeliveryZone.is_active.is_(True)))
+        zone = result.scalars().first()
+        campus_polygon = _campus_polygon()
         if zone is None:
             zone = DeliveryZone(
                 id=uuid.uuid4(),
-                name="Main Campus (placeholder)",
-                polygon_geojson=_placeholder_campus_polygon(),
+                name=CAMPUS_ZONE_NAME,
+                polygon_geojson=campus_polygon,
                 is_active=True,
             )
             session.add(zone)
-            print("Created placeholder campus delivery zone")
+            print(f"Created delivery zone: {CAMPUS_ZONE_NAME}")
+        elif zone.name != CAMPUS_ZONE_NAME or zone.polygon_geojson != campus_polygon:
+            zone.name = CAMPUS_ZONE_NAME
+            zone.polygon_geojson = campus_polygon
+            print(f"Updated existing delivery zone to real boundary: {CAMPUS_ZONE_NAME}")
 
         await session.commit()
         print("Seed complete.")

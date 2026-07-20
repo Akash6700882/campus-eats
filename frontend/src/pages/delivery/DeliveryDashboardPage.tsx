@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { PageSpinner } from "@/components/PageSpinner";
+import { DeliveryLiveMap } from "@/components/map/DeliveryLiveMap";
 import { useDeliveryActions, useDeliveryOrders, useDeliveryProfile } from "@/hooks/useDelivery";
 import { formatCurrency } from "@/lib/format";
 import type { Order } from "@/types";
@@ -197,6 +198,9 @@ export function DeliveryDashboardPage() {
             {locating ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
             Update my location
           </Button>
+        </CardContent>
+        <CardContent className="pt-0">
+          <DeliveryLiveMap latitude={profile.current_latitude} longitude={profile.current_longitude} />
         </CardContent>
       </Card>
 
