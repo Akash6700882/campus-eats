@@ -5,6 +5,7 @@ import { AdminOrdersTab } from "@/pages/admin/AdminOrdersTab";
 import { AdminPartnersTab } from "@/pages/admin/AdminPartnersTab";
 import { AdminMenuTab } from "@/pages/admin/AdminMenuTab";
 import { AdminZoneTab } from "@/pages/admin/AdminZoneTab";
+import { AdminCustomersTab } from "@/pages/admin/AdminCustomersTab";
 
 export function AdminDashboardPage() {
   return (
@@ -14,18 +15,24 @@ export function AdminDashboardPage() {
       </h1>
 
       <Tabs defaultValue="analytics" className="mt-6">
-        <TabsList>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="orders">Orders</TabsTrigger>
-          <TabsTrigger value="partners">Delivery partners</TabsTrigger>
-          <TabsTrigger value="menu">Menu</TabsTrigger>
-          <TabsTrigger value="zone">Delivery zone</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto">
+          <TabsList className="w-max">
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="orders">Orders</TabsTrigger>
+            <TabsTrigger value="customers">Customers</TabsTrigger>
+            <TabsTrigger value="partners">Delivery partners</TabsTrigger>
+            <TabsTrigger value="menu">Menu</TabsTrigger>
+            <TabsTrigger value="zone">Delivery zone</TabsTrigger>
+          </TabsList>
+        </div>
         <TabsContent value="analytics" className="mt-4">
           <AdminAnalyticsTab />
         </TabsContent>
         <TabsContent value="orders" className="mt-4">
           <AdminOrdersTab />
+        </TabsContent>
+        <TabsContent value="customers" className="mt-4">
+          <AdminCustomersTab />
         </TabsContent>
         <TabsContent value="partners" className="mt-4">
           <AdminPartnersTab />

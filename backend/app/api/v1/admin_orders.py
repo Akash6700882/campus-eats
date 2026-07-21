@@ -3,6 +3,8 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.deps import (
+    AdminUserSvc,
+    CurrentUser,
     DbSession,
     DeliveryPartnerRepo,
     DeliveryPartnerSvc,
@@ -13,6 +15,7 @@ from app.core.deps import (
     require_role,
 )
 from app.models.enums import OrderStatus, RoleName
+from app.schemas.admin_user import AdminCustomerResponse
 from app.schemas.delivery import (
     AdminAssignPartnerRequest,
     AdminCancelRequest,
@@ -21,6 +24,7 @@ from app.schemas.delivery import (
     DeliveryPartnerResponse,
 )
 from app.schemas.order import OrderResponse
+from app.services.admin_user_service import AdminUserError
 from app.services.delivery_service import DeliveryError
 from app.services.order_service import OrderError
 from app.ws.events import broadcast_order_event
@@ -37,10 +41,12 @@ async def _reload(order_id: uuid.UUID, order_repo: OrderRepo) -> OrderResponse:
 
 @router.get("/admin/orders", response_model=list[OrderResponse], dependencies=[RequireAdmin])
 async def list_all_orders(
-    order_repo: OrderRepo, status_filter: OrderStatus | None = Query(default=None, alias="status")
+    order_repo: OrderRepo,
+    status_filter: OrderStatus | None = Query(default=None, alias="status"),
+    user_id: uuid.UUID | None = Query(default=None),
 ) -> list[OrderResponse]:
     statuses = [status_filter] if status_filter else list(OrderStatus)
-    orders = await order_repo.list_by_statuses(statuses, limit=200)
+    orders = await order_repo.list_by_statuses(statuses, limit=200, user_id=user_id)
     return [OrderResponse.from_order(o) for o in orders]
 
 
@@ -114,3 +120,60 @@ async def create_delivery_partner(
         await db.rollback()
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
     return DeliveryPartnerResponse.from_partner(partner)
+
+
+@router.get("/admin/customers", response_model=list[AdminCustomerResponse], dependencies=[RequireAdmin])
+async def list_customers(user_repo: UserRepo) -> list[AdminCustomerResponse]:
+    rows = await user_repo.list_customers_with_order_stats()
+    return [AdminCustomerResponse.from_row(*row) for row in rows]
+
+
+@router.post("/admin/users/{user_id}/block", response_model=AdminUserResponse, dependencies=[RequireAdmin])
+async def block_user(
+    user_id: uuid.UUID, current_user: CurrentUser, db: DbSession, admin_user_service: AdminUserSvc
+) -> AdminUserResponse:
+    try:
+        user = await admin_user_service.set_active(current_user.id, user_id, is_active=False)
+        await db.commit()
+    except AdminUserError as exc:
+        await db.rollback()
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    return AdminUserResponse.from_user(user)
+
+
+@router.post("/admin/users/{user_id}/unblock", response_model=AdminUserResponse, dependencies=[RequireAdmin])
+async def unblock_user(
+    user_id: uuid.UUID, current_user: CurrentUser, db: DbSession, admin_user_service: AdminUserSvc
+) -> AdminUserResponse:
+    try:
+        user = await admin_user_service.set_active(current_user.id, user_id, is_active=True)
+        await db.commit()
+    except AdminUserError as exc:
+        await db.rollback()
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    return AdminUserResponse.from_user(user)
+
+
+@router.post(
+    "/admin/users/{user_id}/reset-password", status_code=status.HTTP_204_NO_CONTENT, dependencies=[RequireAdmin]
+)
+async def admin_reset_user_password(user_id: uuid.UUID, db: DbSession, admin_user_service: AdminUserSvc) -> None:
+    try:
+        await admin_user_service.reset_password(user_id)
+        await db.commit()
+    except AdminUserError as exc:
+        await db.rollback()
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
+
+
+@router.delete("/admin/users/{user_id}", response_model=AdminUserResponse, dependencies=[RequireAdmin])
+async def delete_user(
+    user_id: uuid.UUID, current_user: CurrentUser, db: DbSession, admin_user_service: AdminUserSvc
+) -> AdminUserResponse:
+    try:
+        user = await admin_user_service.delete_user(current_user.id, user_id)
+        await db.commit()
+    except AdminUserError as exc:
+        await db.rollback()
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    return AdminUserResponse.from_user(user)

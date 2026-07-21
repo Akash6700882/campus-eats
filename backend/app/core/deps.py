@@ -24,6 +24,7 @@ from app.repositories.role_repository import RoleRepository
 from app.repositories.user_repository import UserRepository
 from app.repositories.wishlist_repository import WishlistRepository
 from app.services.address_service import AddressService
+from app.services.admin_user_service import AdminUserService
 from app.services.auth_service import AuthService
 from app.services.cart_service import CartService
 from app.services.coupon_service import CouponService
@@ -154,6 +155,13 @@ AuthSvc = Annotated[AuthService, Depends(get_auth_service)]
 MenuSvc = Annotated[MenuService, Depends(get_menu_service)]
 CouponSvc = Annotated[CouponService, Depends(get_coupon_service)]
 AddressSvc = Annotated[AddressService, Depends(get_address_service)]
+
+
+def get_admin_user_service(user_repo: UserRepo, auth_service: AuthSvc) -> AdminUserService:
+    return AdminUserService(user_repo, auth_service)
+
+
+AdminUserSvc = Annotated[AdminUserService, Depends(get_admin_user_service)]
 
 
 def get_cart_service(cart_repo: CartRepo, food_repo: FoodRepo, coupon_service: CouponSvc) -> CartService:

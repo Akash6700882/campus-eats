@@ -86,9 +86,15 @@ class AdminUserResponse(BaseModel):
     email: str
     phone: str
     role: str
+    is_active: bool
 
     @staticmethod
     def from_user(user) -> "AdminUserResponse":
         return AdminUserResponse(
-            id=user.id, full_name=user.full_name, email=user.email, phone=user.phone, role=user.role.name
+            id=user.id,
+            full_name=user.full_name,
+            email=user.email,
+            phone=user.phone,
+            role=user.role.name,
+            is_active=user.is_active,
         )

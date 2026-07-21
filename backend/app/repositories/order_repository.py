@@ -48,15 +48,16 @@ class OrderRepository(BaseRepository[Order]):
         return len(result.scalars().all())
 
     async def list_by_statuses(
-        self, statuses: list[OrderStatus], limit: int = 100, offset: int = 0
+        self,
+        statuses: list[OrderStatus],
+        limit: int = 100,
+        offset: int = 0,
+        user_id: uuid.UUID | None = None,
     ) -> list[Order]:
-        result = await self.session.execute(
-            self._base_query()
-            .where(Order.status.in_(statuses))
-            .order_by(Order.created_at.asc())
-            .limit(limit)
-            .offset(offset)
-        )
+        query = self._base_query().where(Order.status.in_(statuses))
+        if user_id is not None:
+            query = query.where(Order.user_id == user_id)
+        result = await self.session.execute(query.order_by(Order.created_at.asc()).limit(limit).offset(offset))
         return list(result.scalars().all())
 
     async def list_for_delivery_partner(

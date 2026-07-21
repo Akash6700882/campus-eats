@@ -1,8 +1,12 @@
 import uuid
+from datetime import datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.orm import selectinload
 
+from app.models.enums import OrderStatus, RoleName
+from app.models.order import Order
+from app.models.role import Role
 from app.models.user import User
 from app.repositories.base import BaseRepository
 
@@ -42,3 +46,24 @@ class UserRepository(BaseRepository[User]):
             select(func.count()).select_from(User).where(User.role.has(name=role_name))
         )
         return int(result.scalar_one())
+
+    async def list_customers_with_order_stats(self) -> list[tuple[User, int, float, datetime | None]]:
+        """Customer accounts with order-count/spend/last-order aggregates for
+        the admin user-management view. Spend counts only DELIVERED orders,
+        matching how AnalyticsRepository.total_revenue defines "real" revenue
+        elsewhere in the app."""
+        spend_case = case((Order.status == OrderStatus.DELIVERED, Order.grand_total), else_=0)
+        result = await self.session.execute(
+            select(
+                User,
+                func.count(Order.id),
+                func.coalesce(func.sum(spend_case), 0),
+                func.max(Order.placed_at),
+            )
+            .join(Role, User.role_id == Role.id)
+            .outerjoin(Order, Order.user_id == User.id)
+            .where(Role.name == RoleName.CUSTOMER.value)
+            .group_by(User.id)
+            .order_by(User.full_name)
+        )
+        return [(user, int(count), float(spend), last_order_at) for user, count, spend, last_order_at in result.all()]

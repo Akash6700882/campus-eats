@@ -12,6 +12,7 @@ import type {
 
 export const adminOrdersKey = ["admin", "orders"] as const;
 export const adminPartnersKey = ["admin", "delivery-partners"] as const;
+export const adminCustomersKey = ["admin", "customers"] as const;
 
 export function useAdminOrders(status?: OrderStatus) {
   return useQuery({
@@ -60,6 +61,50 @@ export function useAdminOrderActions() {
   });
 
   return { cancel, assignPartner };
+}
+
+export function useAdminCustomers() {
+  return useQuery({ queryKey: adminCustomersKey, queryFn: adminApi.listCustomers });
+}
+
+export function useAdminCustomerActions() {
+  const queryClient = useQueryClient();
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: adminCustomersKey });
+
+  const block = useMutation({
+    mutationFn: (userId: string) => adminApi.blockUser(userId),
+    onSuccess: () => {
+      invalidate();
+      toast.success("Account blocked");
+    },
+    onError: (err) => toast.error(apiErrorMessage(err)),
+  });
+
+  const unblock = useMutation({
+    mutationFn: (userId: string) => adminApi.unblockUser(userId),
+    onSuccess: () => {
+      invalidate();
+      toast.success("Account unblocked");
+    },
+    onError: (err) => toast.error(apiErrorMessage(err)),
+  });
+
+  const resetPassword = useMutation({
+    mutationFn: (userId: string) => adminApi.resetUserPassword(userId),
+    onSuccess: () => toast.success("Password reset email sent"),
+    onError: (err) => toast.error(apiErrorMessage(err)),
+  });
+
+  const deleteUser = useMutation({
+    mutationFn: (userId: string) => adminApi.deleteUser(userId),
+    onSuccess: () => {
+      invalidate();
+      toast.success("Account deleted");
+    },
+    onError: (err) => toast.error(apiErrorMessage(err)),
+  });
+
+  return { block, unblock, resetPassword, deleteUser };
 }
 
 export function useCreateDeliveryPartner() {
