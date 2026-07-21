@@ -6,6 +6,7 @@ import { AdminPartnersTab } from "@/pages/admin/AdminPartnersTab";
 import { AdminMenuTab } from "@/pages/admin/AdminMenuTab";
 import { AdminZoneTab } from "@/pages/admin/AdminZoneTab";
 import { AdminCustomersTab } from "@/pages/admin/AdminCustomersTab";
+import { AdminAuditLogTab } from "@/pages/admin/AdminAuditLogTab";
 
 export function AdminDashboardPage() {
   return (
@@ -23,6 +24,7 @@ export function AdminDashboardPage() {
             <TabsTrigger value="partners">Delivery partners</TabsTrigger>
             <TabsTrigger value="menu">Menu</TabsTrigger>
             <TabsTrigger value="zone">Delivery zone</TabsTrigger>
+            <TabsTrigger value="audit">Audit log</TabsTrigger>
           </TabsList>
         </div>
         <TabsContent value="analytics" className="mt-4">
@@ -42,6 +44,9 @@ export function AdminDashboardPage() {
         </TabsContent>
         <TabsContent value="zone" className="mt-4">
           <AdminZoneTab />
+        </TabsContent>
+        <TabsContent value="audit" className="mt-4">
+          <AdminAuditLogTab />
         </TabsContent>
       </Tabs>
     </div>

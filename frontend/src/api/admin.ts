@@ -2,6 +2,7 @@ import { api } from "@/lib/api";
 import type {
   AdminCustomer,
   AdminUser,
+  AuditLogEntry,
   DeliveryPartner,
   DeliveryPartnerCreateInput,
   Order,
@@ -27,4 +28,5 @@ export const adminApi = {
   unblockUser: (userId: string) => api.post<AdminUser>(`/admin/users/${userId}/unblock`).then((r) => r.data),
   resetUserPassword: (userId: string) => api.post<void>(`/admin/users/${userId}/reset-password`).then((r) => r.data),
   deleteUser: (userId: string) => api.delete<AdminUser>(`/admin/users/${userId}`).then((r) => r.data),
+  listAuditLogs: () => api.get<AuditLogEntry[]>("/admin/audit-logs").then((r) => r.data),
 };

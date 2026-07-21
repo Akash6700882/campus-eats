@@ -173,3 +173,7 @@ export function useAdminMenuActions() {
 
   return { createCategory, deleteCategory, createFood, updateFood, deleteFood };
 }
+
+export function useAuditLogs() {
+  return useQuery({ queryKey: ["admin", "audit-logs"], queryFn: adminApi.listAuditLogs, refetchInterval: 20_000 });
+}

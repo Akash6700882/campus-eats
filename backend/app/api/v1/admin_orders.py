@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.deps import (
     AdminUserSvc,
+    AuditLogSvc,
     CurrentUser,
     DbSession,
     DeliveryPartnerRepo,
@@ -54,14 +55,19 @@ async def list_all_orders(
 async def force_cancel_order(
     order_id: uuid.UUID,
     payload: AdminCancelRequest,
+    current_user: CurrentUser,
     db: DbSession,
     order_service: OrderSvc,
     order_repo: OrderRepo,
     notification_service: NotificationSvc,
+    audit_log_service: AuditLogSvc,
 ) -> OrderResponse:
     try:
         order = await order_service.admin_force_cancel(order_id, payload.reason)
         await notification_service.notify_order_status(order.user_id, order.order_number, order.status)
+        await audit_log_service.record(
+            current_user, "order.force_cancel", "order", str(order_id), {"reason": payload.reason}
+        )
         await db.commit()
     except OrderError as exc:
         await db.rollback()
@@ -74,14 +80,23 @@ async def force_cancel_order(
 async def assign_delivery_partner(
     order_id: uuid.UUID,
     payload: AdminAssignPartnerRequest,
+    current_user: CurrentUser,
     db: DbSession,
     order_service: OrderSvc,
     order_repo: OrderRepo,
     notification_service: NotificationSvc,
+    audit_log_service: AuditLogSvc,
 ) -> OrderResponse:
     try:
         order = await order_service.admin_assign_partner(order_id, payload.delivery_partner_id)
         await notification_service.notify_order_status(order.user_id, order.order_number, order.status)
+        await audit_log_service.record(
+            current_user,
+            "order.assign_partner",
+            "order",
+            str(order_id),
+            {"delivery_partner_id": str(payload.delivery_partner_id)},
+        )
         await db.commit()
     except OrderError as exc:
         await db.rollback()
@@ -111,10 +126,17 @@ async def list_delivery_partners(delivery_partner_repo: DeliveryPartnerRepo) -> 
     dependencies=[RequireAdmin],
 )
 async def create_delivery_partner(
-    payload: DeliveryPartnerCreateRequest, db: DbSession, delivery_service: DeliveryPartnerSvc
+    payload: DeliveryPartnerCreateRequest,
+    current_user: CurrentUser,
+    db: DbSession,
+    delivery_service: DeliveryPartnerSvc,
+    audit_log_service: AuditLogSvc,
 ) -> DeliveryPartnerResponse:
     try:
         partner = await delivery_service.create_profile(payload.user_id, payload.vehicle_number)
+        await audit_log_service.record(
+            current_user, "delivery_partner.create", "delivery_partner", str(partner.id)
+        )
         await db.commit()
     except DeliveryError as exc:
         await db.rollback()
@@ -130,10 +152,15 @@ async def list_customers(user_repo: UserRepo) -> list[AdminCustomerResponse]:
 
 @router.post("/admin/users/{user_id}/block", response_model=AdminUserResponse, dependencies=[RequireAdmin])
 async def block_user(
-    user_id: uuid.UUID, current_user: CurrentUser, db: DbSession, admin_user_service: AdminUserSvc
+    user_id: uuid.UUID,
+    current_user: CurrentUser,
+    db: DbSession,
+    admin_user_service: AdminUserSvc,
+    audit_log_service: AuditLogSvc,
 ) -> AdminUserResponse:
     try:
         user = await admin_user_service.set_active(current_user.id, user_id, is_active=False)
+        await audit_log_service.record(current_user, "user.block", "user", str(user_id))
         await db.commit()
     except AdminUserError as exc:
         await db.rollback()
@@ -143,10 +170,15 @@ async def block_user(
 
 @router.post("/admin/users/{user_id}/unblock", response_model=AdminUserResponse, dependencies=[RequireAdmin])
 async def unblock_user(
-    user_id: uuid.UUID, current_user: CurrentUser, db: DbSession, admin_user_service: AdminUserSvc
+    user_id: uuid.UUID,
+    current_user: CurrentUser,
+    db: DbSession,
+    admin_user_service: AdminUserSvc,
+    audit_log_service: AuditLogSvc,
 ) -> AdminUserResponse:
     try:
         user = await admin_user_service.set_active(current_user.id, user_id, is_active=True)
+        await audit_log_service.record(current_user, "user.unblock", "user", str(user_id))
         await db.commit()
     except AdminUserError as exc:
         await db.rollback()
@@ -157,9 +189,12 @@ async def unblock_user(
 @router.post(
     "/admin/users/{user_id}/reset-password", status_code=status.HTTP_204_NO_CONTENT, dependencies=[RequireAdmin]
 )
-async def admin_reset_user_password(user_id: uuid.UUID, db: DbSession, admin_user_service: AdminUserSvc) -> None:
+async def admin_reset_user_password(
+    user_id: uuid.UUID, current_user: CurrentUser, db: DbSession, admin_user_service: AdminUserSvc, audit_log_service: AuditLogSvc
+) -> None:
     try:
         await admin_user_service.reset_password(user_id)
+        await audit_log_service.record(current_user, "user.reset_password", "user", str(user_id))
         await db.commit()
     except AdminUserError as exc:
         await db.rollback()
@@ -168,10 +203,15 @@ async def admin_reset_user_password(user_id: uuid.UUID, db: DbSession, admin_use
 
 @router.delete("/admin/users/{user_id}", response_model=AdminUserResponse, dependencies=[RequireAdmin])
 async def delete_user(
-    user_id: uuid.UUID, current_user: CurrentUser, db: DbSession, admin_user_service: AdminUserSvc
+    user_id: uuid.UUID,
+    current_user: CurrentUser,
+    db: DbSession,
+    admin_user_service: AdminUserSvc,
+    audit_log_service: AuditLogSvc,
 ) -> AdminUserResponse:
     try:
         user = await admin_user_service.delete_user(current_user.id, user_id)
+        await audit_log_service.record(current_user, "user.delete", "user", str(user_id))
         await db.commit()
     except AdminUserError as exc:
         await db.rollback()
