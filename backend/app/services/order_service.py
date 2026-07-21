@@ -2,7 +2,6 @@ import secrets
 import uuid
 from datetime import datetime, timezone
 
-from app.core.config import get_settings
 from app.models.enums import OrderStatus
 from app.models.order import Order, OrderItem
 from app.repositories.address_repository import AddressRepository
@@ -11,6 +10,7 @@ from app.repositories.delivery_partner_repository import DeliveryPartnerReposito
 from app.repositories.delivery_zone_repository import DeliveryZoneRepository
 from app.repositories.order_repository import OrderRepository
 from app.schemas.order import CheckoutRequest
+from app.services.app_settings_service import AppSettingsService
 from app.services.coupon_service import CouponError, CouponService
 from app.services.delivery_assignment import find_nearest_partner
 from app.services.geofence import point_in_zone
@@ -40,6 +40,7 @@ class OrderService:
         delivery_zone_repo: DeliveryZoneRepository,
         coupon_service: CouponService,
         delivery_partner_repo: DeliveryPartnerRepository,
+        app_settings_service: AppSettingsService,
     ):
         self.cart_repo = cart_repo
         self.address_repo = address_repo
@@ -47,6 +48,7 @@ class OrderService:
         self.delivery_zone_repo = delivery_zone_repo
         self.coupon_service = coupon_service
         self.delivery_partner_repo = delivery_partner_repo
+        self.app_settings_service = app_settings_service
 
     @staticmethod
     def _generate_order_number() -> str:
@@ -86,11 +88,11 @@ class OrderService:
             except CouponError as exc:
                 raise OrderError(str(exc)) from exc
 
-        settings = get_settings()
-        delivery_charge = settings.delivery_charge
-        packing_charge = settings.packing_charge
+        app_settings = await self.app_settings_service.get()
+        delivery_charge = float(app_settings.delivery_charge)
+        packing_charge = float(app_settings.packing_charge)
         taxable = item_total - discount_amount
-        gst_amount = round(taxable * settings.gst_percent / 100, 2)
+        gst_amount = round(taxable * float(app_settings.gst_percent) / 100, 2)
         grand_total = round(taxable + delivery_charge + packing_charge + gst_amount, 2)
         estimated_minutes = max((ci.food.prep_time_minutes for ci in cart_items), default=10) + 15
 

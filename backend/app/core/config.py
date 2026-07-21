@@ -60,11 +60,6 @@ class Settings(BaseSettings):
     sms_provider: str = "console"
     whatsapp_provider: str = "console"
 
-    # Order pricing defaults (in smallest currency unit-free decimal, INR)
-    delivery_charge: float = 15.0
-    packing_charge: float = 5.0
-    gst_percent: float = 5.0
-
 
 @lru_cache
 def get_settings() -> Settings:

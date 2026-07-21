@@ -10,6 +10,7 @@ from app.core.jwt import InvalidTokenError, TokenType, decode_token
 from app.core.redis_client import get_redis
 from app.models.user import User
 from app.repositories.address_repository import AddressRepository
+from app.repositories.app_settings_repository import AppSettingsRepository
 from app.repositories.audit_log_repository import AuditLogRepository
 from app.repositories.cart_repository import CartRepository
 from app.repositories.category_repository import CategoryRepository
@@ -26,6 +27,7 @@ from app.repositories.user_repository import UserRepository
 from app.repositories.wishlist_repository import WishlistRepository
 from app.services.address_service import AddressService
 from app.services.admin_user_service import AdminUserService
+from app.services.app_settings_service import AppSettingsService
 from app.services.audit_log_service import AuditLogService
 from app.services.auth_service import AuthService
 from app.services.cart_service import CartService
@@ -84,6 +86,10 @@ def get_audit_log_repository(session: DbSession) -> AuditLogRepository:
     return AuditLogRepository(session)
 
 
+def get_app_settings_repository(session: DbSession) -> AppSettingsRepository:
+    return AppSettingsRepository(session)
+
+
 def get_cart_repository(session: DbSession) -> CartRepository:
     return CartRepository(session)
 
@@ -129,6 +135,7 @@ FoodRepo = Annotated[FoodRepository, Depends(get_food_repository)]
 ImageSvc = Annotated[ImageService, Depends(get_image_service)]
 AddressRepo = Annotated[AddressRepository, Depends(get_address_repository)]
 AuditLogRepo = Annotated[AuditLogRepository, Depends(get_audit_log_repository)]
+AppSettingsRepo = Annotated[AppSettingsRepository, Depends(get_app_settings_repository)]
 CartRepo = Annotated[CartRepository, Depends(get_cart_repository)]
 CouponRepo = Annotated[CouponRepository, Depends(get_coupon_repository)]
 DeliveryZoneRepo = Annotated[DeliveryZoneRepository, Depends(get_delivery_zone_repository)]
@@ -178,8 +185,17 @@ def get_audit_log_service(audit_log_repo: AuditLogRepo) -> AuditLogService:
 AuditLogSvc = Annotated[AuditLogService, Depends(get_audit_log_service)]
 
 
-def get_cart_service(cart_repo: CartRepo, food_repo: FoodRepo, coupon_service: CouponSvc) -> CartService:
-    return CartService(cart_repo, food_repo, coupon_service)
+def get_app_settings_service(app_settings_repo: AppSettingsRepo) -> AppSettingsService:
+    return AppSettingsService(app_settings_repo)
+
+
+AppSettingsSvc = Annotated[AppSettingsService, Depends(get_app_settings_service)]
+
+
+def get_cart_service(
+    cart_repo: CartRepo, food_repo: FoodRepo, coupon_service: CouponSvc, app_settings_service: AppSettingsSvc
+) -> CartService:
+    return CartService(cart_repo, food_repo, coupon_service, app_settings_service)
 
 
 def get_order_service(
@@ -189,9 +205,16 @@ def get_order_service(
     delivery_zone_repo: DeliveryZoneRepo,
     coupon_service: CouponSvc,
     delivery_partner_repo: DeliveryPartnerRepo,
+    app_settings_service: AppSettingsSvc,
 ) -> OrderService:
     return OrderService(
-        cart_repo, address_repo, order_repo, delivery_zone_repo, coupon_service, delivery_partner_repo
+        cart_repo,
+        address_repo,
+        order_repo,
+        delivery_zone_repo,
+        coupon_service,
+        delivery_partner_repo,
+        app_settings_service,
     )
 
 

@@ -8,3 +8,4 @@ export * from "./delivery";
 export * from "./review";
 export * from "./analytics";
 export * from "./auditLog";
+export * from "./appSettings";

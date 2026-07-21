@@ -1,10 +1,10 @@
 import uuid
 
-from app.core.config import get_settings
 from app.models.cart import CartItem
 from app.repositories.cart_repository import CartRepository
 from app.repositories.food_repository import FoodRepository
 from app.schemas.cart import CartItemResponse, CartSummaryResponse
+from app.services.app_settings_service import AppSettingsService
 from app.services.coupon_service import CouponError, CouponService
 
 
@@ -13,10 +13,17 @@ class CartError(Exception):
 
 
 class CartService:
-    def __init__(self, cart_repo: CartRepository, food_repo: FoodRepository, coupon_service: CouponService):
+    def __init__(
+        self,
+        cart_repo: CartRepository,
+        food_repo: FoodRepository,
+        coupon_service: CouponService,
+        app_settings_service: AppSettingsService,
+    ):
         self.cart_repo = cart_repo
         self.food_repo = food_repo
         self.coupon_service = coupon_service
+        self.app_settings_service = app_settings_service
 
     async def add_item(self, user_id: uuid.UUID, food_id: uuid.UUID, quantity: int) -> CartItem:
         food = await self.food_repo.get(food_id)
@@ -48,7 +55,7 @@ class CartService:
         await self.cart_repo.delete(item)
 
     async def get_summary(self, user_id: uuid.UUID, coupon_code: str | None = None) -> CartSummaryResponse:
-        settings = get_settings()
+        app_settings = await self.app_settings_service.get()
         cart_items = await self.cart_repo.list_for_user(user_id)
 
         item_responses = [
@@ -79,9 +86,9 @@ class CartService:
                 coupon_error = str(exc)
 
         taxable = item_total - discount_amount
-        gst_amount = round(taxable * settings.gst_percent / 100, 2)
-        delivery_charge = settings.delivery_charge if item_responses else 0.0
-        packing_charge = settings.packing_charge if item_responses else 0.0
+        gst_amount = round(taxable * float(app_settings.gst_percent) / 100, 2)
+        delivery_charge = float(app_settings.delivery_charge) if item_responses else 0.0
+        packing_charge = float(app_settings.packing_charge) if item_responses else 0.0
         grand_total = round(taxable + delivery_charge + packing_charge + gst_amount, 2)
 
         return CartSummaryResponse(
