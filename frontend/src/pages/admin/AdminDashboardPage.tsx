@@ -8,6 +8,7 @@ import { AdminZoneTab } from "@/pages/admin/AdminZoneTab";
 import { AdminCustomersTab } from "@/pages/admin/AdminCustomersTab";
 import { AdminAuditLogTab } from "@/pages/admin/AdminAuditLogTab";
 import { AdminSettingsTab } from "@/pages/admin/AdminSettingsTab";
+import { AdminReportsTab } from "@/pages/admin/AdminReportsTab";
 
 export function AdminDashboardPage() {
   return (
@@ -27,6 +28,7 @@ export function AdminDashboardPage() {
             <TabsTrigger value="zone">Delivery zone</TabsTrigger>
             <TabsTrigger value="audit">Audit log</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
+            <TabsTrigger value="reports">Reports</TabsTrigger>
           </TabsList>
         </div>
         <TabsContent value="analytics" className="mt-4">
@@ -52,6 +54,9 @@ export function AdminDashboardPage() {
         </TabsContent>
         <TabsContent value="settings" className="mt-4">
           <AdminSettingsTab />
+        </TabsContent>
+        <TabsContent value="reports" className="mt-4">
+          <AdminReportsTab />
         </TabsContent>
       </Tabs>
     </div>

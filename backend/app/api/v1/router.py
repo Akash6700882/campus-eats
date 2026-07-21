@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from app.api.v1.addresses import router as addresses_router
 from app.api.v1.admin_audit_log import router as admin_audit_log_router
 from app.api.v1.admin_orders import router as admin_orders_router
+from app.api.v1.admin_reports import router as admin_reports_router
 from app.api.v1.analytics import router as analytics_router
 from app.api.v1.app_settings import router as app_settings_router
 from app.api.v1.auth import router as auth_router
@@ -33,6 +34,7 @@ api_router.include_router(delivery_zone_router)
 api_router.include_router(admin_orders_router)
 api_router.include_router(admin_audit_log_router)
 api_router.include_router(app_settings_router)
+api_router.include_router(admin_reports_router)
 api_router.include_router(analytics_router)
 api_router.include_router(reviews_router)
 api_router.include_router(wishlist_router)
