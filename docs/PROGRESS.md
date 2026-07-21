@@ -267,10 +267,77 @@ publicly reachable HTTPS URL to point at, which this app doesn't have
 until Phase "Deployment" below happens (or a tunnel like ngrok is used
 for interim local testing).
 
+Live keys were wired in after this (real `rzp_live_...` credentials in
+both `.env` files) since the account is KYC-verified for live mode —
+but the app itself is still only reachable on localhost, so nothing
+outside this machine can actually charge a card through it yet.
+
+### Phase 12 — Admin platform: no-kitchen order flow, user management, audit log, settings, reports
+
+Five pieces landed together, all admin-facing:
+
+- **Kitchen confirmation removed from the live order flow.** Paid orders
+  now auto-advance straight from `pending` to `ready` (and auto-assign a
+  delivery partner) the instant payment succeeds, via both the
+  client-side verify call and the webhook — no human kitchen action
+  required. The kitchen backend (role, endpoints, state-machine
+  transitions) is kept rather than deleted — still exercised by ~30
+  existing tests and usable for a never-paid order — but the Kitchen
+  dashboard is gone from the frontend (route, nav, redirect), matching
+  the product's Admin/Delivery/Customer dashboard set. `PENDING→READY`
+  added as a new allowed state-machine transition alongside the
+  existing `PENDING→ACCEPTED` path. Customer-facing copy and the order
+  status timeline updated to stop implying a kitchen-approval step that
+  no longer happens.
+- **Admin user management**: block/unblock (`is_active`, already
+  enforced at login), reset-password (reuses the existing forgot-password
+  email flow), and delete — implemented as an irreversible soft-delete
+  (anonymize name/email/phone, deactivate) rather than a real row
+  `DELETE`, since `User.orders` cascades `all, delete-orphan` and a hard
+  delete would destroy order/payment history. All four guard against
+  acting on your own account. New `GET /admin/customers` with
+  per-customer order-count/total-spend/last-order aggregates via one
+  grouped query. New "Customers" admin tab.
+- **Audit log**: a new `AuditLog` table (incremental migration) records
+  actor, action, target, and JSON details for every state-changing admin
+  action — order force-cancel/assign-partner, delivery-partner creation,
+  user block/unblock/delete/reset-password, delivery-zone updates, and
+  settings changes. `actor_name` is snapshotted at write time so a log
+  entry stays accurate even if that admin's own account is later
+  renamed/anonymized. New "Audit log" admin tab.
+- **Admin-editable settings**: GST%, delivery charge, packing charge,
+  restaurant name, and business hours moved from static `.env` values to
+  a DB-backed singleton row, editable via `GET/PUT (admin) /settings`.
+  Cart preview and actual checkout pricing both read this live, so an
+  admin edit takes effect immediately rather than needing a redeploy.
+  Business hours are stored but not yet enforced against checkout.
+  New "Settings" admin tab.
+- **Reports + export**: `GET /admin/reports` with `daily`/`weekly`/
+  `monthly`/`yearly` trailing-window periods (last 1/7/30/365 days —
+  simpler than calendar periods, consistent with the existing
+  trailing-7-day Analytics convention) and `json`/`csv`/`excel`/`pdf`
+  output. New `openpyxl` dependency for Excel; PDF reuses `reportlab`
+  (already used for invoices). New "Reports" admin tab with a period
+  selector and one-click export buttons.
+
+Two incremental Alembic migrations (`audit_logs`, `app_settings`) —
+existing seeded/live data untouched, no reset needed. 40 new backend
+tests across the five pieces (162 total, ruff clean). Frontend:
+typecheck, eslint, 29 vitest tests, and a production build all pass;
+spot-verified live against the real dev database (real order counts/
+revenue in the reports endpoint, real customer list, live settings
+change flowing into cart pricing).
+
+Built alongside a second, independent in-progress change to the auth
+flow (IITG-email-restricted signup, email verification replacing phone
+OTP) that was being edited concurrently in the same files — those edits
+were deliberately left untouched/unstaged rather than swept into these
+commits.
+
 ## Not started yet
 
-- **Kitchen/delivery/admin frontend for reviews/wishlist/notifications** —
-  e.g. no way for an admin to moderate/delete other users' reviews from the
+- **Delivery/admin frontend for reviews/wishlist/notifications** — e.g.
+  no way for an admin to moderate/delete other users' reviews from the
   UI (the `DELETE /reviews/{id}` endpoint only allows the review's own
   author, by design).
 - **Deployment** — Dockerfiles and docker-compose exist for local dev and
@@ -279,6 +346,11 @@ for interim local testing).
 - **Email/push notifications** — the in-app `Notification` feed exists;
   the `EmailService`/SMS provider stubs from Phase 1 aren't wired to order
   events yet (only password-reset emails use `EmailService` today).
+- **Business hours enforcement** — stored in admin settings but checkout
+  isn't actually gated on them yet.
+- **Super-admin role** — only `customer`/`admin`/`kitchen`/`delivery`
+  exist; a separate super-admin tier (vs. regular admin) was mentioned in
+  an early product sketch but never confirmed as in-scope.
 
 ## Known gaps / accepted trade-offs
 
