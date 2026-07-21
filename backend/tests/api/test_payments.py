@@ -300,3 +300,80 @@ async def test_webhook_does_not_override_client_side_verified_payment(
     payment = await _get_payment(db_session, initiate["razorpay_order_id"])
     assert payment.status == PaymentStatus.PAID
     assert payment.provider_payment_id == payment_id
+
+
+async def test_verify_payment_auto_confirms_without_kitchen(client, admin_headers, customer_headers, seeded_zone):
+    order = await _place_order(client, admin_headers, customer_headers, seeded_zone)
+    initiate = (
+        await client.post(f"/api/v1/orders/{order['id']}/payment/initiate", headers=customer_headers)
+    ).json()
+
+    payment_id = "pay_autoconfirm_1"
+    resp = await client.post(
+        f"/api/v1/orders/{order['id']}/payment/verify",
+        json={
+            "razorpay_order_id": initiate["razorpay_order_id"],
+            "razorpay_payment_id": payment_id,
+            "razorpay_signature": f"valid-{payment_id}",
+        },
+        headers=customer_headers,
+    )
+    assert resp.status_code == 200, resp.text
+
+    order_detail = (await client.get(f"/api/v1/orders/{order['id']}", headers=customer_headers)).json()
+    assert order_detail["status"] == "ready"
+    assert order_detail["delivery_partner"] is None
+
+
+async def test_verify_payment_auto_assigns_available_delivery_partner(
+    client, admin_headers, customer_headers, seeded_zone, delivery_partner
+):
+    order = await _place_order(client, admin_headers, customer_headers, seeded_zone)
+    initiate = (
+        await client.post(f"/api/v1/orders/{order['id']}/payment/initiate", headers=customer_headers)
+    ).json()
+
+    payment_id = "pay_autoconfirm_2"
+    await client.post(
+        f"/api/v1/orders/{order['id']}/payment/verify",
+        json={
+            "razorpay_order_id": initiate["razorpay_order_id"],
+            "razorpay_payment_id": payment_id,
+            "razorpay_signature": f"valid-{payment_id}",
+        },
+        headers=customer_headers,
+    )
+
+    order_detail = (await client.get(f"/api/v1/orders/{order['id']}", headers=customer_headers)).json()
+    assert order_detail["status"] == "assigned"
+    assert order_detail["delivery_partner"]["id"] == str(delivery_partner.id)
+
+
+async def test_webhook_auto_confirms_order_without_kitchen(client, admin_headers, customer_headers, seeded_zone):
+    order = await _place_order(client, admin_headers, customer_headers, seeded_zone)
+    initiate = (
+        await client.post(f"/api/v1/orders/{order['id']}/payment/initiate", headers=customer_headers)
+    ).json()
+
+    body = _webhook_payload("payment.captured", initiate["razorpay_order_id"], "pay_webhook_autoconfirm")
+    resp = await client.post(
+        "/api/v1/payments/webhook",
+        content=body,
+        headers={"X-Razorpay-Signature": VALID_WEBHOOK_SIGNATURE, "Content-Type": "application/json"},
+    )
+    assert resp.status_code == 200, resp.text
+
+    order_detail = (await client.get(f"/api/v1/orders/{order['id']}", headers=customer_headers)).json()
+    assert order_detail["status"] == "ready"
+
+
+async def test_kitchen_endpoints_still_work_directly_when_never_paid(
+    client, admin_headers, customer_headers, kitchen_headers, seeded_zone
+):
+    """The kitchen API isn't deleted, just no longer required — an order
+    that's never paid still sits in the kitchen queue exactly as before."""
+    order = await _place_order(client, admin_headers, customer_headers, seeded_zone)
+
+    resp = await client.post(f"/api/v1/kitchen/orders/{order['id']}/accept", headers=kitchen_headers)
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["status"] == "accepted"

@@ -27,14 +27,13 @@ const NAV_LINKS = [
 
 const STAFF_DASHBOARD_PATH: Record<string, string> = {
   admin: "/admin",
-  kitchen: "/kitchen",
   delivery: "/delivery",
 };
 
 export function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const isStaff = !!user && user.role !== "customer";
+  const isStaff = !!user && (user.role === "admin" || user.role === "delivery");
   const { data: cart } = useCart();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
@@ -53,9 +52,9 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="container flex h-16 items-center gap-4">
-        <Link to={logoHref} className="group flex shrink-0 items-center gap-2 font-heading text-lg font-bold">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 transition-transform duration-200 group-hover:rotate-12">
-            <UtensilsCrossed className="h-4.5 w-4.5 text-primary" />
+        <Link to={logoHref} className="group flex shrink-0 items-center gap-2 font-heading text-lg font-extrabold">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary transition-transform duration-200 group-hover:rotate-6">
+            <UtensilsCrossed className="h-4.5 w-4.5 text-primary-foreground" />
           </span>
           <span className="hidden sm:inline">Campus Eats</span>
           {isStaff && (

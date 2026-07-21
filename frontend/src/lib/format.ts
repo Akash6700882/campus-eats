@@ -19,7 +19,7 @@ export const ORDER_STATUS_LABELS: Record<string, string> = {
   pending: "Order placed",
   accepted: "Accepted by kitchen",
   preparing: "Preparing",
-  ready: "Ready for pickup",
+  ready: "Order confirmed",
   assigned: "Delivery partner assigned",
   picked_up: "Picked up",
   on_the_way: "On the way",

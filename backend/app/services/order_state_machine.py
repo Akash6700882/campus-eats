@@ -1,7 +1,10 @@
 from app.models.enums import OrderStatus
 
 ALLOWED_TRANSITIONS: dict[OrderStatus, set[OrderStatus]] = {
-    OrderStatus.PENDING: {OrderStatus.ACCEPTED, OrderStatus.CANCELLED},
+    # READY is reachable directly from PENDING for the payment-triggered
+    # auto-confirm path (OrderService.auto_confirm_after_payment) — paid
+    # orders skip kitchen confirmation entirely rather than waiting on it.
+    OrderStatus.PENDING: {OrderStatus.ACCEPTED, OrderStatus.READY, OrderStatus.CANCELLED},
     OrderStatus.ACCEPTED: {OrderStatus.PREPARING, OrderStatus.CANCELLED},
     OrderStatus.PREPARING: {OrderStatus.READY, OrderStatus.CANCELLED},
     OrderStatus.READY: {OrderStatus.ASSIGNED},

@@ -15,10 +15,16 @@ describe("StatusTimeline", () => {
   });
 
   it("renders every step label for an in-progress order", () => {
-    render(<StatusTimeline status="preparing" />);
+    render(<StatusTimeline status="assigned" />);
     expect(screen.getByText("Order placed")).toBeInTheDocument();
-    expect(screen.getByText("Accepted by kitchen")).toBeInTheDocument();
-    expect(screen.getByText("Preparing")).toBeInTheDocument();
+    expect(screen.getByText("Order confirmed")).toBeInTheDocument();
+    expect(screen.getByText("Delivery partner assigned")).toBeInTheDocument();
     expect(screen.getByText("Delivered")).toBeInTheDocument();
+  });
+
+  it("doesn't show the kitchen-confirmation steps — paid orders auto-skip them", () => {
+    render(<StatusTimeline status="assigned" />);
+    expect(screen.queryByText("Accepted by kitchen")).not.toBeInTheDocument();
+    expect(screen.queryByText("Preparing")).not.toBeInTheDocument();
   });
 });

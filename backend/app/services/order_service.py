@@ -167,11 +167,10 @@ class OrderService:
     async def kitchen_start_preparing(self, order_id: uuid.UUID) -> Order:
         return await self._transition(order_id, OrderStatus.PREPARING)
 
-    async def kitchen_mark_ready(self, order_id: uuid.UUID) -> Order:
-        """Marks the order ready and immediately tries to auto-assign the
-        nearest available delivery partner (falls back to staying 'ready'
-        and unassigned if none are free — an admin can assign manually)."""
-        order = await self._transition(order_id, OrderStatus.READY)
+    async def _assign_delivery_partner_if_available(self, order: Order) -> None:
+        """Generates the delivery OTP and tries to auto-assign the nearest
+        available delivery partner (falls back to staying 'ready' and
+        unassigned if none are free — an admin can assign manually)."""
         order.delivery_otp = f"{secrets.randbelow(1_000_000):06d}"
 
         partners = await self.delivery_partner_repo.list_available()
@@ -180,6 +179,28 @@ class OrderService:
             order.status = OrderStatus.ASSIGNED
             order.delivery_partner = partner
             partner.is_available = False
+
+    async def kitchen_mark_ready(self, order_id: uuid.UUID) -> Order:
+        order = await self._transition(order_id, OrderStatus.READY)
+        await self._assign_delivery_partner_if_available(order)
+        return order
+
+    async def auto_confirm_after_payment(self, order_id: uuid.UUID) -> Order:
+        """Drives a freshly-paid order straight to 'ready' (and tries
+        auto-assignment) without a human kitchen action — the live order
+        flow doesn't route through kitchen confirmation. Idempotent: called
+        from both the client-side verify-signature path and the webhook, so
+        a non-pending order (already advanced by whichever path won the
+        race) is left untouched rather than re-processed."""
+        order = await self.order_repo.get_with_details(order_id)
+        if order is None:
+            raise OrderError("order not found")
+        if order.status != OrderStatus.PENDING:
+            return order
+
+        assert_transition_allowed(order.status, OrderStatus.READY)
+        order.status = OrderStatus.READY
+        await self._assign_delivery_partner_if_available(order)
         return order
 
     # --- Delivery ------------------------------------------------------------

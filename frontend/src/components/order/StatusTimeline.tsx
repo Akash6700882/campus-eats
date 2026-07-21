@@ -3,16 +3,12 @@ import { cn } from "@/lib/utils";
 import { ORDER_STATUS_LABELS } from "@/lib/format";
 import type { OrderStatus } from "@/types";
 
-const TIMELINE_STEPS: OrderStatus[] = [
-  "pending",
-  "accepted",
-  "preparing",
-  "ready",
-  "assigned",
-  "picked_up",
-  "on_the_way",
-  "delivered",
-];
+// "accepted"/"preparing" are omitted here — paid orders auto-confirm
+// straight from "pending" to "ready" (no kitchen-confirmation gate), so
+// showing them as distinct customer-facing steps would falsely imply a
+// manual approval that never happened. They remain valid OrderStatus
+// values for the (unpaid-only) kitchen API, just not part of this timeline.
+const TIMELINE_STEPS: OrderStatus[] = ["pending", "ready", "assigned", "picked_up", "on_the_way", "delivered"];
 
 export function StatusTimeline({ status }: { status: OrderStatus }) {
   if (status === "cancelled" || status === "refunded") {

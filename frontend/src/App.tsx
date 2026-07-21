@@ -17,7 +17,6 @@ import { OrderTrackingPage } from "@/pages/customer/OrderTrackingPage";
 import { OrderHistoryPage } from "@/pages/customer/OrderHistoryPage";
 import { ProfilePage } from "@/pages/customer/ProfilePage";
 import { WishlistPage } from "@/pages/customer/WishlistPage";
-import { KitchenDashboardPage } from "@/pages/kitchen/KitchenDashboardPage";
 import { DeliveryDashboardPage } from "@/pages/delivery/DeliveryDashboardPage";
 import { AdminDashboardPage } from "@/pages/admin/AdminDashboardPage";
 
@@ -72,14 +71,6 @@ export default function App() {
                     <ProtectedRoute>
                       <WishlistPage />
                     </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/kitchen"
-                  element={
-                    <RoleProtectedRoute roles={["kitchen", "admin"]}>
-                      <KitchenDashboardPage />
-                    </RoleProtectedRoute>
                   }
                 />
                 <Route

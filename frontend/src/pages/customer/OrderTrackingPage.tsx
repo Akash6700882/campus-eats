@@ -114,7 +114,7 @@ export function OrderTrackingPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-heading font-semibold">Payment pending</p>
-                    <p className="text-sm text-muted-foreground">Complete payment so the kitchen can start preparing.</p>
+                    <p className="text-sm text-muted-foreground">Complete payment to confirm your order.</p>
                   </div>
                   <p className="font-heading text-xl font-bold">{formatCurrency(order.grand_total)}</p>
                 </div>
